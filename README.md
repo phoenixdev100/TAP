@@ -6,7 +6,9 @@
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
-[![shadcn/ui](https://img.shields.io/badge/shadcn/ui-000000?style=for-the-badge&logo=ui&logoColor=white)](https://ui.shadcn.com)
+[![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org)
+[![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com)
+[![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com)
 
 <img src="https://raw.githubusercontent.com/phoenixdev100/tap/main/public/campus-dashboard.png" alt="Campus Dashboard Preview" width="800"/>
 
@@ -14,185 +16,119 @@
 
 ## 📝 About The Project
 
-<div align="center">
-  <img src="https://raw.githubusercontent.com/phoenixdev100/tap/main/public/campus-life.png" alt="Campus Life" width="600"/>
-</div>
+TAP is a comprehensive campus management application designed to streamline academic activities and enhance the student experience. It provides an intuitive interface for managing schedules, assignments, and academic resources.
 
-TAP is a comprehensive campus management application that serves as a one-stop solution for all campus-related activities. It integrates these crucial aspects of campus life:
+## 📝 Key Features
 
-<!-- ### 🎓 Training
-<div align="center">
-  <img src="https://raw.githubusercontent.com/phoenixdev100/tap/main/public/training-section.png" alt="Training Section" width="400"/>
-</div>
+### 📚 Academic Management
+- 📅 Interactive class schedule with daily/weekly views
+- 📝 Assignment tracking and submission
+- 📚 Study materials organization
+- ✅ Attendance tracking
 
-- 🎯 Professional development courses
-- 🛠️ Skill enhancement workshops
-- 📜 Industry certification programs
-- 📅 Training schedule management
-- 📈 Progress tracking
-- 📚 Online learning resources -->
+### 🎨 User Experience
+- 🌓 Dark/Light mode support
+- 📱 Responsive design for all devices
+- 🎯 Intuitive navigation
+- 🔔 Real-time notifications
 
-### 📚 Academics
-<div align="center">
-  <img src="https://raw.githubusercontent.com/phoenixdev100/tap/main/public/academics-section.png" alt="Academics Section" width="400"/>
-</div>
+### 🔒 Security
+- 🔐 JWT-based authentication
+- 👥 Role-based access control
+- 🛡️ Secure API endpoints
 
-- 📖 Course management
-- ⏰ Class schedules
-- 📝 Assignment submissions
-- 📚 Study materials
-- 📊 Grade tracking
-- ✅ Attendance management
-- 👨‍🏫 Faculty-student interaction
-- 📅 Academic calendar
+## 🛠️ Tech Stack
 
-<!-- ### 💼 Placement
-<div align="center">
-  <img src="https://raw.githubusercontent.com/phoenixdev100/tap/main/public/placement-section.png" alt="Placement Section" width="400"/>
-</div>
+### Frontend
+- **Framework**: React 18 with TypeScript
+- **Build Tool**: Vite
+- **Styling**: Tailwind CSS + shadcn/ui
+- **State Management**: React Query
+- **Form Handling**: React Hook Form + Zod
+- **Icons**: Lucide React
 
-- 💼 Job/internship postings
-- 🏢 Company profiles
-- 📅 Interview schedules
-- 📄 Resume builder
-- 🎤 Mock interview tools
-- 📊 Placement statistics
-- 🎯 Career guidance
-- 🤝 Industry connections -->
-
-## 📋 Table of Contents
-- [✨ Features](#features)
-- [🚀 Getting Started](#getting-started)
-- [🛠️ Tech Stack](#tech-stack)
-- [📦 Installation](#installation)
-- [⚙️ Development](#development)
-- [🌐 Deployment](#deployment)
-- [🔗 Project Links](#project-links)
-- [📝 License](#license)
-
-## ✨ Features
-<div align="center">
-  <img src="https://raw.githubusercontent.com/phoenixdev100/tap/main/public/features-preview.png" alt="Features Preview" width="600"/>
-</div>
-
-- 🎨 Modern and responsive UI for seamless experience across devices
-- 🔔 Real-time notifications for important updates
-- 📱 Intuitive dashboard for students, faculty, and administrators
-- 📱 Mobile-first design for on-the-go access
-- 🌓 Dark/Light mode support for comfortable viewing
-- 🔄 Real-time updates for announcements and schedules
-- 🔒 Secure authentication and role-based access
-- 📊 Analytics and reporting tools
-- 📅 Event calendar integration
-- 💬 Built-in messaging system
-- 📑 Document management
-- 🔍 Advanced search functionality
+### Backend
+- **Runtime**: Node.js
+- **Framework**: Express.js
+- **Database**: MongoDB
+- **Authentication**: JWT
+- **API**: RESTful architecture
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js (v18 or higher)
-- npm (v9 or higher)
+- Node.js (v18+)
+- MongoDB (v6+)
+- npm (v9+)
 
-### 📦 Installation
+### Installation
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/phoenixdev100/TAP.git
+git clone https://github.com/yourusername/TAP.git
 cd TAP
 ```
 
 2. **Install dependencies**
 ```bash
+# Install frontend dependencies
+cd frontend
+npm install
+
+# Install backend dependencies
+cd ../backend
 npm install
 ```
 
-3. **Start the development server**
+3. **Set up environment variables**
 ```bash
+# Backend (.env)
+MONGODB_URI=your_mongodb_uri
+JWT_SECRET=your_jwt_secret
+PORT=5000
+
+# Frontend (.env)
+VITE_API_URL=http://localhost:5000
+```
+
+4. **Start the application**
+```bash
+# Start backend server
+cd backend
+npm run dev
+
+# Start frontend in new terminal
+cd frontend
 npm run dev
 ```
 
-## 🛠️ Tech Stack
+## 📦 Available Scripts
 
 ### Frontend
-- **Framework**: React 18
-- **Build Tool**: Vite
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **UI Components**: shadcn/ui
-- **State Management**: React Query
-- **Form Handling**: React Hook Form
-- **Validation**: Zod
-- **Animations**: Framer Motion
-- **Icons**: Lucide React
-
-### Development Tools
-- **Linting**: ESLint
-- **Code Formatting**: Prettier
-- **Type Checking**: TypeScript
-- **Package Manager**: npm
-
-## ⚙️ Development
-
-### Available Scripts
-
 ```bash
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Build for development
-npm run build:dev
-
-# Lint code
-npm run lint
-
-# Preview production build
-npm run preview
+npm run dev        # Start development server
+npm run build      # Build for production
+npm run preview    # Preview production build
+npm run lint       # Run ESLint
 ```
 
-## 📝 License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+### Backend
+```bash
+npm run dev        # Start development server
+npm run start      # Start production server
+npm run test       # Run tests
+```
 
 ## 🤝 Contributing
-<div align="center">
-  <img src="https://raw.githubusercontent.com/phoenixdev100/tap/main/public/contributing.png" alt="Contributing" width="400"/>
-</div>
 
-We welcome contributions from the campus community! Whether it's:
-- 🐛 Bug reports
-- 💡 Feature suggestions
-- 📝 Documentation improvements
-- 🔧 Code contributions
+We welcome contributions! Please feel free to submit a Pull Request.
 
-## 🔒 Security
-<div align="center">
-  <img src="https://raw.githubusercontent.com/phoenixdev100/tap/main/public/security.png" alt="Security" width="400"/>
-</div>
+## 📝 License
 
-- 🔐 End-to-end encryption for sensitive data
-- 🔍 Regular security audits
-- 📜 Compliance with educational data protection standards
-
-## 🌟 Future Enhancements
-<div align="center">
-  <img src="https://raw.githubusercontent.com/phoenixdev100/tap/main/public/future.png" alt="Future Enhancements" width="400"/>
-</div>
-
-- 🎓 Integration with learning management systems
-- 📱 Mobile app development
-- 🤖 AI-powered career guidance
-- 📊 Advanced analytics dashboard
-- 👥 Alumni network integration
-- ✍️ Online examination system
-- 🎥 Virtual classroom capabilities
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/phoenixdev100/tap/main/public/campus-community.png" alt="Campus Community" width="600"/>
-  <br/>
-  Made with ❤️ for Deepak
+  Made with ❤️ by Deepak
 </div>
