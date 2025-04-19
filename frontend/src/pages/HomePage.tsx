@@ -13,9 +13,7 @@ import { BookOpen, CalendarDays, ListTodo, FileText, UserCheck, Sparkles } from 
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
-import axios from 'axios';
-
-const API_URL = 'http://localhost:5000/api/auth';
+import api from "@/api/axios";
 
 interface AuthResponse {
   success: boolean;
@@ -80,7 +78,7 @@ const HomePage = () => {
 
     try {
       if (activeTab === 'login') {
-        const response = await axios.post<AuthResponse>(`${API_URL}/login`, {
+        const response = await api.post<AuthResponse>('/api/auth/login', {
           email,
           password
         });
@@ -95,7 +93,7 @@ const HomePage = () => {
           navigate("/dashboard");
         }
       } else {
-        const response = await axios.post<AuthResponse>(`${API_URL}/signup`, {
+        const response = await api.post<AuthResponse>('/api/auth/signup', {
           username: name,
           email,
           password
@@ -112,7 +110,6 @@ const HomePage = () => {
         }
       }
     } catch (error: any) {
-      // Show error message immediately
       const errorMessage = error.response?.data?.message || "An unexpected error occurred";
       toast({
         title: "Error",
@@ -120,7 +117,6 @@ const HomePage = () => {
         variant: "destructive",
       });
       
-      // Clear form on login error
       if (activeTab === 'login') {
         setPassword('');
       }

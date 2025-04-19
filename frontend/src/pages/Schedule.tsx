@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import axios from 'axios';
+import api from "@/api/axios";
 import { Plus, Edit, Trash2, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, MapPin, User } from 'lucide-react';
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -47,8 +47,6 @@ interface ApiResponse<T> {
   schedule?: T;
 }
 
-const API_URL = 'http://localhost:5000/api/schedule';
-
 const Schedule = () => {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -68,21 +66,9 @@ const Schedule = () => {
   });
   const { toast } = useToast();
 
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-    return {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    };
-  };
-
   const fetchSchedules = async () => {
     try {
-      const headers = getAuthHeaders();
-      const response = await axios.get<ApiResponse<Schedule>>(API_URL, { headers });
+      const response = await api.get<ApiResponse<Schedule>>('/api/schedule');
       
       if (response.data.success && response.data.schedules) {
         setSchedules(response.data.schedules);
@@ -117,14 +103,12 @@ const Schedule = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // Validate form data
       if (!formData.className || !formData.professor || !formData.dayOfWeek || 
           !formData.startTime || !formData.endTime || !formData.location) {
         throw new Error('Please fill in all required fields');
       }
 
-      const headers = getAuthHeaders();
-      const response = await axios.post<ApiResponse<Schedule>>(API_URL, formData, { headers });
+      const response = await api.post<ApiResponse<Schedule>>('/api/schedule', formData);
 
       if (response.data.success) {
         toast({
@@ -166,11 +150,9 @@ const Schedule = () => {
         throw new Error('Please fill in all required fields');
       }
 
-      const headers = getAuthHeaders();
-      const response = await axios.put<ApiResponse<Schedule>>(
-        `${API_URL}/${selectedSchedule._id}`,
-        formData,
-        { headers }
+      const response = await api.put<ApiResponse<Schedule>>(
+        `/api/schedule/${selectedSchedule._id}`,
+        formData
       );
 
       if (response.data.success) {
@@ -198,8 +180,7 @@ const Schedule = () => {
     if (!window.confirm('Are you sure you want to delete this class?')) return;
 
     try {
-      const headers = getAuthHeaders();
-      const response = await axios.delete<ApiResponse<Schedule>>(`${API_URL}/${id}`, { headers });
+      const response = await api.delete<ApiResponse<Schedule>>(`/api/schedule/${id}`);
 
       if (response.data.success) {
         toast({
