@@ -6,10 +6,12 @@ const jwt = require('jsonwebtoken');
 // Signup route
 router.post('/signup', async (req, res) => {
     try {
+        console.log('Signup request received:', { body: { ...req.body, password: '***' } });
         const { username, email, password } = req.body;
 
         // Input validation
         if (!username || !email || !password) {
+            console.log('Validation failed:', { username, email, password: !!password });
             return res.status(400).json({
                 success: false,
                 message: 'All fields are required'
@@ -19,6 +21,7 @@ router.post('/signup', async (req, res) => {
         // Check if user already exists
         const existingUser = await User.findOne({ $or: [{ email }, { username }] });
         if (existingUser) {
+            console.log('User already exists:', { email, username });
             return res.status(400).json({
                 success: false,
                 message: 'User with this email or username already exists'
@@ -33,11 +36,12 @@ router.post('/signup', async (req, res) => {
         });
 
         await user.save();
+        console.log('User created successfully:', { userId: user._id });
 
         // Generate JWT token
         const token = jwt.sign(
             { userId: user._id },
-            process.env.JWT_SECRET || 'master',
+            process.env.JWT_SECRET,
             { expiresIn: '24h' }
         );
 
@@ -52,10 +56,11 @@ router.post('/signup', async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Signup error:', error);
+        console.error('Signup error details:', error);
         res.status(500).json({
             success: false,
-            message: 'Error creating user. Please try again.'
+            message: 'Error creating user. Please try again.',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 });
@@ -63,10 +68,12 @@ router.post('/signup', async (req, res) => {
 // Login route
 router.post('/login', async (req, res) => {
     try {
+        console.log('Login request received:', { body: { ...req.body, password: '***' } });
         const { email, password } = req.body;
 
         // Input validation
         if (!email || !password) {
+            console.log('Validation failed:', { email, password: !!password });
             return res.status(400).json({
                 success: false,
                 message: 'Email and password are required'
@@ -76,6 +83,7 @@ router.post('/login', async (req, res) => {
         // Find user by email
         const user = await User.findOne({ email });
         if (!user) {
+            console.log('User not found:', { email });
             return res.status(401).json({
                 success: false,
                 message: 'Account not found. Please check your email or sign up.'
@@ -85,6 +93,7 @@ router.post('/login', async (req, res) => {
         // Check password
         const isMatch = await user.comparePassword(password);
         if (!isMatch) {
+            console.log('Password mismatch for user:', { email });
             return res.status(401).json({
                 success: false,
                 message: 'Incorrect password. Please try again.'
@@ -94,10 +103,11 @@ router.post('/login', async (req, res) => {
         // Generate JWT token
         const token = jwt.sign(
             { userId: user._id },
-            process.env.JWT_SECRET || 'your-secret-key',
+            process.env.JWT_SECRET,
             { expiresIn: '24h' }
         );
 
+        console.log('Login successful:', { userId: user._id });
         res.json({
             success: true,
             message: 'Login successful',
@@ -109,10 +119,11 @@ router.post('/login', async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Login error:', error);
+        console.error('Login error details:', error);
         res.status(500).json({
             success: false,
-            message: 'Error logging in. Please try again.'
+            message: 'Error logging in. Please try again.',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 });
