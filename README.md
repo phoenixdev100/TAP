@@ -10,7 +10,7 @@
 [![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com)
 [![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com)
 
-<img src="https://raw.githubusercontent.com/phoenixdev100/tap/main/public/campus-dashboard.png" alt="Campus Dashboard Preview" width="800"/>
+<img src="https://raw.githubusercontent.com/phoenixdev100/tap/main/frontend/src/img/campus-dashboard.png" alt="Campus Dashboard Preview" width="800"/>
 
 </div>
 
