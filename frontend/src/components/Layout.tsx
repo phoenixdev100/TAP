@@ -35,8 +35,7 @@ const Layout = ({ children }: LayoutProps) => {
   ];
 
   const handleLogout = () => {
-    localStorage.removeItem("isAuthenticated");
-    localStorage.removeItem("userName");
+    localStorage.clear();
     toast({
       title: "Logged out",
       description: "You have been successfully logged out.",
@@ -84,10 +83,6 @@ const Layout = ({ children }: LayoutProps) => {
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/settings")}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
@@ -99,11 +94,11 @@ const Layout = ({ children }: LayoutProps) => {
           </div>
         </div>
       </header>
-      
+
       <main className="container mx-auto py-6 px-4 md:px-6 flex-1 pb-16">
         {children}
       </main>
-      
+
       <footer className="fixed bottom-0 left-0 right-0 w-full bg-background border-t border-border shadow-lg z-50">
         <div className="h-14">
           <Tabs value={currentPath} className="w-full h-full" defaultValue="/">
@@ -118,18 +113,18 @@ const Layout = ({ children }: LayoutProps) => {
                   {/* Icon container */}
                   <div className={cn(
                     "relative z-10 transition-colors duration-200",
-                    currentPath === tab.value 
-                      ? "text-primary" 
+                    currentPath === tab.value
+                      ? "text-primary"
                       : "text-muted-foreground group-hover:text-primary"
                   )}>
                     {tab.icon}
                   </div>
-                  
+
                   {/* Label */}
                   <span className={cn(
                     "text-[10px] font-medium leading-none transition-colors duration-200",
-                    currentPath === tab.value 
-                      ? "text-primary" 
+                    currentPath === tab.value
+                      ? "text-primary"
                       : "text-muted-foreground group-hover:text-primary"
                   )}>
                     {tab.label}
