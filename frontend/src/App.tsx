@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound";
 import AuthCheck from "./components/AuthCheck";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import GPACalculator from "./pages/GPACalculator";
+import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -97,6 +98,16 @@ const App = () => (
               <PrivateRoute>
                 <Layout>
                   <GPACalculator />
+                </Layout>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <PrivateRoute>
+                <Layout>
+                  <Profile />
                 </Layout>
               </PrivateRoute>
             }
