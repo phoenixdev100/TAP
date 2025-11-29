@@ -3,11 +3,28 @@ const router = express.Router();
 const Schedule = require('../models/Schedule');
 const auth = require('../middleware/auth');
 
-// Get all classes for a user
+// Get all classes (role-based access)
 router.get('/', auth, async (req, res) => {
   try {
-    const schedules = await Schedule.find({ userId: req.user.userId })
-      .sort({ dayOfWeek: 1, startTime: 1 });
+    let schedules;
+    
+    if (req.user.role === 'student') {
+      // Students can see all schedules (created by teachers/admins)
+      schedules = await Schedule.find({})
+        .populate('userId', 'username role')
+        .sort({ dayOfWeek: 1, startTime: 1 });
+    } else if (req.user.role === 'college_admin') {
+      // Admins can see all schedules in the system
+      schedules = await Schedule.find({})
+        .populate('userId', 'username role')
+        .sort({ dayOfWeek: 1, startTime: 1 });
+    } else {
+      // Teachers see their own schedules
+      schedules = await Schedule.find({ userId: req.user.userId })
+        .populate('userId', 'username role')
+        .sort({ dayOfWeek: 1, startTime: 1 });
+    }
+    
     res.json({
       success: true,
       schedules
@@ -21,9 +38,17 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// Add a new class
+// Add a new class (teachers and admins only)
 router.post('/', auth, async (req, res) => {
   try {
+    // Check if user has permission to create schedules
+    if (req.user.role === 'student') {
+      return res.status(403).json({
+        success: false,
+        message: 'Students cannot create class schedules'
+      });
+    }
+
     const { className, professor, dayOfWeek, startTime, endTime, location, color } = req.body;
 
     // Validate required fields
@@ -62,22 +87,37 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-// Update a class
+// Update a class (teachers and admins only)
 router.put('/:id', auth, async (req, res) => {
   try {
+    // Check if user has permission to update schedules
+    if (req.user.role === 'student') {
+      return res.status(403).json({
+        success: false,
+        message: 'Students cannot update class schedules'
+      });
+    }
+
     const { className, professor, dayOfWeek, startTime, endTime, location, color } = req.body;
     const scheduleId = req.params.id;
 
-    // Check if schedule exists and belongs to user
-    const schedule = await Schedule.findOne({ 
-      _id: scheduleId,
-      userId: req.user.userId
-    });
+    // Check if schedule exists and belongs to user (or admin can edit any)
+    let schedule;
+    if (req.user.role === 'college_admin') {
+      // Admins can edit any schedule
+      schedule = await Schedule.findById(scheduleId);
+    } else {
+      // Teachers can only edit their own schedules
+      schedule = await Schedule.findOne({ 
+        _id: scheduleId,
+        userId: req.user.userId
+      });
+    }
 
     if (!schedule) {
       return res.status(404).json({
         success: false,
-        message: 'Schedule not found'
+        message: 'Schedule not found or you do not have permission to edit it'
       });
     }
 
@@ -106,21 +146,36 @@ router.put('/:id', auth, async (req, res) => {
   }
 });
 
-// Delete a class
+// Delete a class (teachers and admins only)
 router.delete('/:id', auth, async (req, res) => {
   try {
+    // Check if user has permission to delete schedules
+    if (req.user.role === 'student') {
+      return res.status(403).json({
+        success: false,
+        message: 'Students cannot delete class schedules'
+      });
+    }
+
     const scheduleId = req.params.id;
 
-    // Check if schedule exists and belongs to user
-    const schedule = await Schedule.findOne({
-      _id: scheduleId,
-      userId: req.user.userId
-    });
+    // Check if schedule exists and belongs to user (or admin can delete any)
+    let schedule;
+    if (req.user.role === 'college_admin') {
+      // Admins can delete any schedule
+      schedule = await Schedule.findById(scheduleId);
+    } else {
+      // Teachers can only delete their own schedules
+      schedule = await Schedule.findOne({
+        _id: scheduleId,
+        userId: req.user.userId
+      });
+    }
 
     if (!schedule) {
       return res.status(404).json({
         success: false,
-        message: 'Schedule not found'
+        message: 'Schedule not found or you do not have permission to delete it'
       });
     }
 
@@ -139,4 +194,4 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
-module.exports = router; 
+module.exports = router;
