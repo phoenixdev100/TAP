@@ -411,23 +411,23 @@ const Assignments = () => {
   const stats = getAssignmentStats();
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="min-h-screen w-full flex flex-col pb-10 sm:pb-0 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
             Assignments & Exams
             {user?.role === 'student' && (
-              <span className="ml-2 text-sm text-muted-foreground font-normal">
+              <span className="ml-2 text-sm text-muted-foreground font-normal block sm:inline">
                 (Student View)
               </span>
             )}
             {hasFullControl && (
-              <span className="ml-2 text-sm text-green-600 font-normal">
+              <span className="ml-2 text-sm text-green-600 font-normal block sm:inline">
                 (Admin Control)
               </span>
             )}
           </h2>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm sm:text-base">
             {user?.role === 'student' 
               ? 'Track your upcoming deadlines and submit your work'
               : 'Manage assignments and grade student submissions'
@@ -437,25 +437,26 @@ const Assignments = () => {
         {canEditAssignment && (
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-gradient-to-r from-[#7C3AED] to-[#A855F7] hover:from-[#6D28D9] hover:to-[#9333EA] text-white shadow-lg transition-all duration-300 flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Add Assignment
+              <Button className="bg-gradient-to-r from-[#7C3AED] to-[#A855F7] hover:from-[#6D28D9] hover:to-[#9333EA] text-white shadow-lg transition-all duration-300 flex items-center gap-2 text-sm sm:text-base">
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Add Assignment</span>
+                <span className="sm:hidden">Add</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px] border-0 shadow-2xl bg-gradient-to-b from-background to-background/95 backdrop-blur-xl">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+            <DialogContent className="sm:max-w-[500px] max-w-[95vw] border-0 shadow-2xl bg-gradient-to-b from-background to-background/95 backdrop-blur-xl">
+              <DialogHeader className="pb-4">
+                <DialogTitle className="text-lg sm:text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
                   Create New Assignment
                 </DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
                 <Input
                   placeholder="Assignment Title"
                   name="title"
                   value={formData.title}
                   onChange={handleInputChange}
                   required
-                  className="border-2 focus:ring-2 focus:ring-purple-500"
+                  className="border-2 focus:ring-2 focus:ring-purple-500 text-sm sm:text-base"
                 />
                 <Textarea
                   placeholder="Assignment Description"
@@ -463,8 +464,8 @@ const Assignments = () => {
                   value={formData.description}
                   onChange={handleInputChange}
                   required
-                  rows={4}
-                  className="border-2 focus:ring-2 focus:ring-purple-500"
+                  rows={3}
+                  className="border-2 focus:ring-2 focus:ring-purple-500 text-sm sm:text-base resize-none"
                 />
                 <Input
                   type="date"
@@ -492,56 +493,56 @@ const Assignments = () => {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader className="bg-blue-100 rounded-t-lg">
-            <CardTitle className="flex items-center justify-between text-lg">
-              <span>Total</span>
-              <FileText className="h-5 w-5" />
+          <CardHeader className="bg-blue-100 rounded-t-lg py-3 sm:py-4">
+            <CardTitle className="flex items-center justify-between text-sm sm:text-lg">
+              <span className="text-sm sm:text-base">Total</span>
+              <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-6">
-            <p className="text-3xl font-bold text-center">{stats.total}</p>
-            <p className="text-center text-muted-foreground">Assignments</p>
+          <CardContent className="pt-4 sm:pt-6">
+            <p className="text-2xl sm:text-3xl font-bold text-center">{stats.total}</p>
+            <p className="text-center text-muted-foreground text-xs sm:text-sm">Assignments</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="bg-green-100 rounded-t-lg">
-            <CardTitle className="flex items-center justify-between text-lg">
-              <span>Completed</span>
-              <CheckCheck className="h-5 w-5" />
+          <CardHeader className="bg-green-100 rounded-t-lg py-3 sm:py-4">
+            <CardTitle className="flex items-center justify-between text-sm sm:text-lg">
+              <span className="text-sm sm:text-base">Completed</span>
+              <CheckCheck className="h-4 w-4 sm:h-5 sm:w-5" />
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-6">
-            <p className="text-3xl font-bold text-center">{stats.completed}</p>
-            <p className="text-center text-muted-foreground">Submitted</p>
+          <CardContent className="pt-4 sm:pt-6">
+            <p className="text-2xl sm:text-3xl font-bold text-center">{stats.completed}</p>
+            <p className="text-center text-muted-foreground text-xs sm:text-sm">Submitted</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="bg-amber-100 rounded-t-lg">
-            <CardTitle className="flex items-center justify-between text-lg">
-              <span>Pending</span>
-              <Clock className="h-5 w-5" />
+          <CardHeader className="bg-amber-100 rounded-t-lg py-3 sm:py-4">
+            <CardTitle className="flex items-center justify-between text-sm sm:text-lg">
+              <span className="text-sm sm:text-base">Pending</span>
+              <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-6">
-            <p className="text-3xl font-bold text-center">{stats.pending}</p>
-            <p className="text-center text-muted-foreground">To Do</p>
+          <CardContent className="pt-4 sm:pt-6">
+            <p className="text-2xl sm:text-3xl font-bold text-center">{stats.pending}</p>
+            <p className="text-center text-muted-foreground text-xs sm:text-sm">To Do</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="bg-red-100 rounded-t-lg">
-            <CardTitle className="flex items-center justify-between text-lg">
-              <span>Overdue</span>
-              <CalendarClock className="h-5 w-5" />
+          <CardHeader className="bg-red-100 rounded-t-lg py-3 sm:py-4">
+            <CardTitle className="flex items-center justify-between text-sm sm:text-lg">
+              <span className="text-sm sm:text-base">Overdue</span>
+              <CalendarClock className="h-4 w-4 sm:h-5 sm:w-5" />
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-6">
-            <p className="text-3xl font-bold text-center">{stats.overdue}</p>
-            <p className="text-center text-muted-foreground">Late</p>
+          <CardContent className="pt-4 sm:pt-6">
+            <p className="text-2xl sm:text-3xl font-bold text-center">{stats.overdue}</p>
+            <p className="text-center text-muted-foreground text-xs sm:text-sm">Late</p>
           </CardContent>
         </Card>
       </div>
@@ -562,18 +563,18 @@ const Assignments = () => {
         ) : (
           assignments.map((assignment) => (
             <Card key={assignment.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div className="space-y-2">
-                    <CardTitle className="text-xl">{assignment.title}</CardTitle>
-                    <CardDescription>{assignment.description}</CardDescription>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <CardHeader className="pb-3 sm:pb-4">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                  <div className="space-y-2 flex-1">
+                    <CardTitle className="text-lg sm:text-xl">{assignment.title}</CardTitle>
+                    <CardDescription className="text-sm sm:text-base">{assignment.description}</CardDescription>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
                       <span className="font-medium">{assignment.className}</span>
                       <span>Due: {format(new Date(assignment.dueDate), 'MMM dd, yyyy')}</span>
                       {assignment.teacher && <span>Teacher: {assignment.teacher}</span>}
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-row sm:flex-col gap-2 sm:gap-2">
                     {user?.role === 'student' ? (
                       <>
                         <Button
@@ -581,18 +582,20 @@ const Assignments = () => {
                           size="sm"
                           onClick={() => openSubmitDialog(assignment)}
                           disabled={assignment.status === 'completed'}
-                          className="flex items-center gap-2"
+                          className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
                         >
-                          <Upload className="h-4 w-4" />
-                          {assignment.status === 'completed' ? 'Submitted' : 'Submit'}
+                          <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span className="hidden sm:inline">{assignment.status === 'completed' ? 'Submitted' : 'Submit'}</span>
+                          <span className="sm:hidden">{assignment.status === 'completed' ? 'Done' : 'Sub'}</span>
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="flex items-center gap-2"
+                          className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
                         >
-                          <Eye className="h-4 w-4" />
-                          View
+                          <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span className="hidden sm:inline">View</span>
+                          <span className="sm:hidden">👁</span>
                         </Button>
                       </>
                     ) : (
@@ -601,19 +604,21 @@ const Assignments = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => openEditDialog(assignment)}
-                          className="flex items-center gap-2"
+                          className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
                         >
-                          <Edit className="h-4 w-4" />
-                          Edit
+                          <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span className="hidden sm:inline">Edit</span>
+                          <span className="sm:hidden">✏</span>
                         </Button>
                         <Button
                           variant="destructive"
                           size="sm"
                           onClick={() => handleDelete(assignment.id)}
-                          className="flex items-center gap-2"
+                          className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
                         >
-                          <Trash2 className="h-4 w-4" />
-                          Delete
+                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span className="hidden sm:inline">Delete</span>
+                          <span className="sm:hidden">🗑</span>
                         </Button>
                       </>
                     )}
