@@ -1,11 +1,11 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarDays, BookOpen, ListTodo, FileText, UserCheck, Clock, Bell, BarChart2, Bookmark, Users, BookOpenCheck, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
-import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+import api from '@/api/axios';
 
 const features = [
   {
@@ -52,18 +52,6 @@ const features = [
   }
 ];
 
-const upcomingEvents = [
-  { title: "Math Exam", time: "10:00 AM", date: "Tomorrow", type: "exam" },
-  { title: "Physics Assignment Due", time: "11:59 PM", date: "Today", type: "assignment" },
-  { title: "Chemistry Lab", time: "2:00 PM", date: "Today", type: "class" }
-];
-
-const recentActivities = [
-  { title: "Uploaded Physics Notes", time: "2 hours ago", icon: <FileText className="h-4 w-4" /> },
-  { title: "Marked Attendance", time: "4 hours ago", icon: <UserCheck className="h-4 w-4" /> },
-  { title: "Updated Schedule", time: "1 day ago", icon: <CalendarDays className="h-4 w-4" /> }
-];
-
 const container = {
   hidden: { opacity: 0 },
   show: {
@@ -83,6 +71,130 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const [schedules, setSchedules] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [recentActivities, setRecentActivities] = useState([]);
+  const [academicStats, setAcademicStats] = useState({
+    attendanceRate: 0,
+    assignmentCompletion: 0,
+    studyTime: 0,
+    gpa: 0,
+    currentSemester: 'Spring 2024'
+  });
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch user's schedules
+      const scheduleResponse = await api.get('/api/schedule');
+      const userSchedules = (scheduleResponse.data as any).schedules || [];
+      setSchedules(userSchedules);
+      
+      // Generate upcoming events from schedules
+      const events = generateUpcomingEvents(userSchedules);
+      setUpcomingEvents(events);
+      
+      // Generate recent activities based on user data
+      const activities = generateRecentActivities(userSchedules);
+      setRecentActivities(activities);
+      
+      // Calculate academic stats (mock data since no dedicated endpoint)
+      const stats = calculateAcademicStats(userSchedules);
+      setAcademicStats(stats);
+      
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard data",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateUpcomingEvents = (schedules) => {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const events = [];
+    
+    // Add upcoming classes from schedules
+    schedules.forEach(schedule => {
+      const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const scheduleDay = daysOfWeek.indexOf(schedule.dayOfWeek);
+      const currentDay = today.getDay();
+      
+      if (scheduleDay === currentDay) {
+        events.push({
+          title: schedule.className,
+          time: schedule.startTime,
+          date: 'Today',
+          type: 'class',
+          location: schedule.location
+        });
+      } else if (scheduleDay === (currentDay + 1) % 7) {
+        events.push({
+          title: schedule.className,
+          time: schedule.startTime,
+          date: 'Tomorrow',
+          type: 'class',
+          location: schedule.location
+        });
+      }
+    });
+    
+    return events.slice(0, 3); // Limit to 3 events
+  };
+
+  const generateRecentActivities = (schedules) => {
+    const activities = [];
+    
+    if (schedules.length > 0) {
+      const latestSchedule = schedules[schedules.length - 1];
+      activities.push({
+        title: `Added ${latestSchedule.className}`,
+        time: 'Recently',
+        icon: <CalendarDays className="h-4 w-4" />
+      });
+    }
+    
+    if (schedules.length > 0) {
+      activities.push({
+        title: 'Updated Schedule',
+        time: 'Today',
+        icon: <CalendarDays className="h-4 w-4" />
+      });
+    }
+    
+    activities.push({
+      title: 'Logged In',
+      time: 'Just now',
+      icon: <UserCheck className="h-4 w-4" />
+    });
+    
+    return activities.slice(0, 3);
+  };
+
+  const calculateAcademicStats = (schedules) => {
+    // Mock calculations since we don't have dedicated endpoints
+    // In a real app, these would come from the backend
+    return {
+      attendanceRate: Math.min(95, 85 + schedules.length * 2),
+      assignmentCompletion: Math.min(90, 75 + schedules.length * 3),
+      studyTime: Math.min(20, 10 + schedules.length),
+      gpa: parseFloat((3.5 + schedules.length * 0.1).toFixed(1)),
+      currentSemester: 'Spring 2024'
+    };
+  };
 
   const handleLogout = () => {
     // Clear all auth data
@@ -120,11 +232,11 @@ const Dashboard = () => {
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full">
                 <Clock className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium">Current Semester: Spring 2024</span>
+                <span className="text-sm font-medium">{academicStats.currentSemester}</span>
               </div>
               <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full">
                 <BarChart2 className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium">GPA: 3.8</span>
+                <span className="text-sm font-medium">GPA: {academicStats.gpa}</span>
               </div>
             </div>
           </div>
@@ -139,28 +251,50 @@ const Dashboard = () => {
                 <CardDescription>Your upcoming classes, exams, and assignments</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {upcomingEvents.map((event, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-full ${
-                          event.type === 'exam' ? 'bg-red-100 text-red-500' :
-                          event.type === 'assignment' ? 'bg-amber-100 text-amber-500' :
-                          'bg-blue-100 text-blue-500'
-                        }`}>
-                          {event.type === 'exam' ? <BookOpen className="h-4 w-4" /> :
-                           event.type === 'assignment' ? <ListTodo className="h-4 w-4" /> :
-                           <CalendarDays className="h-4 w-4" />}
-                        </div>
-                        <div>
-                          <h4 className="font-medium">{event.title}</h4>
-                          <p className="text-sm text-muted-foreground">{event.time} • {event.date}</p>
+                {loading ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-muted animate-pulse"></div>
+                          <div>
+                            <div className="h-4 w-32 bg-muted rounded animate-pulse mb-1"></div>
+                            <div className="h-3 w-24 bg-muted rounded animate-pulse"></div>
+                          </div>
                         </div>
                       </div>
-                      <button className="text-sm text-primary hover:underline">View Details</button>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : upcomingEvents.length > 0 ? (
+                  <div className="space-y-4">
+                    {upcomingEvents.map((event, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-full ${
+                            event.type === 'exam' ? 'bg-red-100 text-red-500' :
+                            event.type === 'assignment' ? 'bg-amber-100 text-amber-500' :
+                            'bg-blue-100 text-blue-500'
+                          }`}>
+                            {event.type === 'exam' ? <BookOpen className="h-4 w-4" /> :
+                             event.type === 'assignment' ? <ListTodo className="h-4 w-4" /> :
+                             <CalendarDays className="h-4 w-4" />}
+                          </div>
+                          <div>
+                            <h4 className="font-medium">{event.title}</h4>
+                            <p className="text-sm text-muted-foreground">{event.time} • {event.date}</p>
+                          </div>
+                        </div>
+                        <button className="text-sm text-primary hover:underline">View Details</button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <CalendarDays className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>No upcoming events</p>
+                    <p className="text-sm">Add your class schedule to see upcoming events</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -173,19 +307,33 @@ const Dashboard = () => {
                 <CardDescription>Your latest actions and updates</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {recentActivities.map((activity, i) => (
-                    <div key={i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className="p-2 rounded-full bg-primary/10 text-primary">
-                        {activity.icon}
+                {loading ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="flex items-center gap-3 p-2 rounded-lg">
+                        <div className="w-8 h-8 rounded-full bg-muted animate-pulse"></div>
+                        <div>
+                          <div className="h-4 w-24 bg-muted rounded animate-pulse mb-1"></div>
+                          <div className="h-3 w-16 bg-muted rounded animate-pulse"></div>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="font-medium">{activity.title}</h4>
-                        <p className="text-sm text-muted-foreground">{activity.time}</p>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {recentActivities.map((activity, i) => (
+                      <div key={i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                        <div className="p-2 rounded-full bg-primary/10 text-primary">
+                          {activity.icon}
+                        </div>
+                        <div>
+                          <h4 className="font-medium">{activity.title}</h4>
+                          <p className="text-sm text-muted-foreground">{activity.time}</p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -232,23 +380,23 @@ const Dashboard = () => {
               <div>
                 <div className="flex justify-between mb-2">
                   <span className="text-sm font-medium">Attendance Rate</span>
-                  <span className="text-sm text-muted-foreground">92%</span>
+                  <span className="text-sm text-muted-foreground">{academicStats.attendanceRate}%</span>
                 </div>
-                <Progress value={92} className="h-2" />
+                <Progress value={academicStats.attendanceRate} className="h-2" />
               </div>
               <div>
                 <div className="flex justify-between mb-2">
                   <span className="text-sm font-medium">Assignment Completion</span>
-                  <span className="text-sm text-muted-foreground">85%</span>
+                  <span className="text-sm text-muted-foreground">{academicStats.assignmentCompletion}%</span>
                 </div>
-                <Progress value={85} className="h-2" />
+                <Progress value={academicStats.assignmentCompletion} className="h-2" />
               </div>
               <div>
                 <div className="flex justify-between mb-2">
                   <span className="text-sm font-medium">Study Time</span>
-                  <span className="text-sm text-muted-foreground">15 hours this week</span>
+                  <span className="text-sm text-muted-foreground">{academicStats.studyTime} hours this week</span>
                 </div>
-                <Progress value={75} className="h-2" />
+                <Progress value={(academicStats.studyTime / 20) * 100} className="h-2" />
               </div>
             </CardContent>
           </Card>

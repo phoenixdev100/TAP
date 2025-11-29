@@ -10,7 +10,7 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { BookOpen, CalendarDays, ListTodo, FileText, UserCheck, Sparkles } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import api from "@/api/axios";
@@ -152,7 +152,7 @@ const HomePage = () => {
     },
   ];
 
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -162,7 +162,7 @@ const HomePage = () => {
     }
   };
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { y: 20, opacity: 0 },
     visible: {
       y: 0,
@@ -183,29 +183,29 @@ const HomePage = () => {
         <div className="absolute top-40 left-40 w-80 h-80 bg-indigo-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
       </div>
 
-      <header className="px-6 py-4 md:py-6 md:px-10 relative z-10">
+      <header className="px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4 md:py-6 lg:py-8 relative z-10">
         <div className="container mx-auto">
-          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent flex items-center gap-2">
-            <Sparkles className="h-6 w-6 text-primary" />
+          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent flex items-center gap-2">
+            <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 lg:h-8 lg:w-8 text-primary" />
             TAP
           </h1>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 sm:px-6 py-8 sm:py-10 md:px-10 md:py-16 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-10 md:gap-16 items-center">
+      <main className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 md:px-6 md:py-8 lg:px-8 lg:py-10 relative z-10 min-h-[calc(100vh-100px)] flex items-center">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 md:gap-8 lg:gap-10 items-center w-full">
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6 }}
-            className="flex flex-col space-y-4 sm:space-y-6"
+            className="flex flex-col space-y-3 sm:space-y-4 md:space-y-6"
           >
             <div className="space-y-3 sm:space-y-4">
               <motion.h2 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight"
+                className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold tracking-tight"
               >
                 Your Ultimate <span className="text-gradient bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">College Helper</span>
               </motion.h2>
@@ -213,7 +213,7 @@ const HomePage = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="text-base sm:text-lg text-muted-foreground md:pr-10"
+                className="text-sm sm:text-base md:text-lg lg:text-xl text-muted-foreground md:pr-4 lg:pr-6"
               >
                 Manage your classes, assignments, notes, and attendance all in one place. Boost your academic performance with our all-in-one TAP platform.
               </motion.p>
@@ -223,17 +223,17 @@ const HomePage = () => {
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"
+              className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-3 md:gap-4"
             >
               {features.map((feature, i) => (
                 <motion.div 
                   key={i} 
                   variants={itemVariants}
-                  className={`p-3 sm:p-4 rounded-lg bg-gradient-to-br ${feature.color} shadow-sm border border-white/20 backdrop-blur-sm hover:shadow-md transition-all duration-300`}
+                  className={`p-3 sm:p-4 md:p-5 rounded-lg bg-gradient-to-br ${feature.color} shadow-lg border border-white/20 backdrop-blur-sm hover:shadow-xl transition-all duration-300`}
                 >
-                  <div className="mb-2">{feature.icon}</div>
-                  <h3 className="font-medium text-sm sm:text-base">{feature.title}</h3>
-                  <p className="text-xs sm:text-sm text-muted-foreground">{feature.description}</p>
+                  <div className="mb-2 sm:mb-3 scale-100 sm:scale-105">{feature.icon}</div>
+                  <h3 className="font-semibold text-xs sm:text-sm md:text-base lg:text-lg">{feature.title}</h3>
+                  <p className="text-xs text-muted-foreground line-clamp-2">{feature.description}</p>
                 </motion.div>
               ))}
             </motion.div>
@@ -243,9 +243,9 @@ const HomePage = () => {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="w-full max-w-md mx-auto mt-8 sm:mt-0"
+            className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl mx-auto mt-4 sm:mt-0"
           >
-            <Card className="w-full shadow-xl bg-background/95 backdrop-blur-sm border-white/20 relative overflow-hidden">
+            <Card className="w-full shadow-2xl bg-background/95 backdrop-blur-sm border-white/20 relative overflow-hidden">
               <div className="absolute -top-20 -right-20 w-40 h-40 bg-primary/10 rounded-full blur-3xl"></div>
               <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl"></div>
               <CardHeader className="relative">
