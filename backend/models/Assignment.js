@@ -39,7 +39,23 @@ const assignmentSchema = new mongoose.Schema({
     },
     content: {
       type: String,
-      required: true
+      required: false
+    },
+    fileData: {
+      type: Buffer,
+      required: false
+    },
+    originalFileName: {
+      type: String,
+      required: false
+    },
+    fileType: {
+      type: String,
+      required: false
+    },
+    fileSize: {
+      type: Number,
+      required: false
     },
     score: {
       type: Number,
