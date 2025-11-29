@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import api from "@/api/axios";
-import { Plus, Edit, Trash2, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, MapPin, User } from 'lucide-react';
+import { Plus, Edit, Trash2, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, MapPin, User, Eye } from 'lucide-react';
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/popover";
 import type { SelectSingleEventHandler } from "react-day-picker";
 import { cn } from "@/lib/utils";
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Schedule {
   _id: string;
@@ -48,6 +49,7 @@ interface ApiResponse<T> {
 }
 
 const Schedule = () => {
+  const { user } = useAuth();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -66,6 +68,12 @@ const Schedule = () => {
   });
   const { toast } = useToast();
 
+  // Check if user has permission to edit schedules
+  const canEditSchedule = user?.role === 'teacher' || user?.role === 'college_admin';
+  
+  // Check if user has full admin control
+  const hasFullControl = user?.role === 'college_admin';
+
   const fetchSchedules = async () => {
     try {
       const response = await api.get<ApiResponse<Schedule>>('/api/schedule');
@@ -81,6 +89,7 @@ const Schedule = () => {
         title: "Error",
         description: error.response?.data?.message || error.message || "Failed to fetch schedules",
         variant: "destructive",
+        duration: 5000,
       });
     }
   };
@@ -114,6 +123,7 @@ const Schedule = () => {
         toast({
           title: "Success",
           description: "Class schedule added successfully",
+          duration: 5000,
         });
         setIsAddDialogOpen(false);
         setFormData({
@@ -135,6 +145,7 @@ const Schedule = () => {
         title: "Error",
         description: error.response?.data?.message || error.message || "Failed to add schedule",
         variant: "destructive",
+        duration: 5000,
       });
     }
   };
@@ -159,6 +170,7 @@ const Schedule = () => {
         toast({
           title: "Success",
           description: "Class schedule updated successfully",
+          duration: 5000,
         });
         setIsEditDialogOpen(false);
         setSelectedSchedule(null);
@@ -172,6 +184,7 @@ const Schedule = () => {
         title: "Error",
         description: error.response?.data?.message || error.message || "Failed to update schedule",
         variant: "destructive",
+        duration: 5000,
       });
     }
   };
@@ -186,6 +199,7 @@ const Schedule = () => {
         toast({
           title: "Success",
           description: "Class schedule deleted successfully",
+          duration: 5000,
         });
         fetchSchedules();
       } else {
@@ -197,6 +211,7 @@ const Schedule = () => {
         title: "Error",
         description: error.response?.data?.message || error.message || "Failed to delete schedule",
         variant: "destructive",
+        duration: 5000,
       });
     }
   };
@@ -253,95 +268,107 @@ const Schedule = () => {
           <div className="flex justify-between items-center">
             <h1 className="text-2xl font-bold">
               Class Schedule
+              {user?.role === 'student' && (
+                <span className="ml-2 text-sm text-muted-foreground font-normal">
+                  (View Only)
+                </span>
+              )}
+              {hasFullControl && (
+                <span className="ml-2 text-sm text-green-600 font-normal">
+                  (Admin Control)
+                </span>
+              )}
             </h1>
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-gradient-to-r from-[#7C3AED] to-[#A855F7] hover:from-[#6D28D9] hover:to-[#9333EA] text-white shadow-lg transition-all duration-300 flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  Add Class
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px] border-0 shadow-2xl bg-gradient-to-b from-background to-background/95 backdrop-blur-xl">
-                <DialogHeader>
-                  <DialogTitle className="text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-                    Add New Class
-                  </DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <Input
-                    placeholder="Class Name"
-                    name="className"
-                    value={formData.className}
-                    onChange={handleInputChange}
-                    required
-                    className="border-2 focus:ring-2 focus:ring-purple-500"
-                  />
-                  <Input
-                    placeholder="Professor Name"
-                    name="professor"
-                    value={formData.professor}
-                    onChange={handleInputChange}
-                    required
-                    className="border-2 focus:ring-2 focus:ring-purple-500"
-                  />
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left font-normal border-2 focus:ring-2 focus:ring-purple-500"
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={handleDateSelect}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <div className="grid grid-cols-2 gap-4">
-                    <Input
-                      type="time"
-                      name="startTime"
-                      value={formData.startTime}
-                      onChange={handleInputChange}
-                      required
-                      className="border-2 focus:ring-2 focus:ring-purple-500"
-                    />
-                    <Input
-                      type="time"
-                      name="endTime"
-                      value={formData.endTime}
-                      onChange={handleInputChange}
-                      required
-                      className="border-2 focus:ring-2 focus:ring-purple-500"
-                    />
-                  </div>
-                  <Input
-                    placeholder="Room Number / Location"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleInputChange}
-                    required
-                    className="border-2 focus:ring-2 focus:ring-purple-500"
-                  />
-                  <Input
-                    type="color"
-                    name="color"
-                    value={formData.color}
-                    onChange={handleInputChange}
-                    className="h-12 cursor-pointer"
-                  />
-                  <Button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600">
+            {canEditSchedule && (
+              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-gradient-to-r from-[#7C3AED] to-[#A855F7] hover:from-[#6D28D9] hover:to-[#9333EA] text-white shadow-lg transition-all duration-300 flex items-center gap-2">
+                    <Plus className="h-4 w-4" />
                     Add Class
                   </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px] border-0 shadow-2xl bg-gradient-to-b from-background to-background/95 backdrop-blur-xl">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                      Add New Class
+                    </DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <Input
+                      placeholder="Class Name"
+                      name="className"
+                      value={formData.className}
+                      onChange={handleInputChange}
+                      required
+                      className="border-2 focus:ring-2 focus:ring-purple-500"
+                    />
+                    <Input
+                      placeholder="Professor Name"
+                      name="professor"
+                      value={formData.professor}
+                      onChange={handleInputChange}
+                      required
+                      className="border-2 focus:ring-2 focus:ring-purple-500"
+                    />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start text-left font-normal border-2 focus:ring-2 focus:ring-purple-500"
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={handleDateSelect}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Input
+                        type="time"
+                        name="startTime"
+                        value={formData.startTime}
+                        onChange={handleInputChange}
+                        required
+                        className="border-2 focus:ring-2 focus:ring-purple-500"
+                      />
+                      <Input
+                        type="time"
+                        name="endTime"
+                        value={formData.endTime}
+                        onChange={handleInputChange}
+                        required
+                        className="border-2 focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
+                    <Input
+                      placeholder="Room Number / Location"
+                      name="location"
+                      value={formData.location}
+                      onChange={handleInputChange}
+                      required
+                      className="border-2 focus:ring-2 focus:ring-purple-500"
+                    />
+                    <Input
+                      type="color"
+                      name="color"
+                      value={formData.color}
+                      onChange={handleInputChange}
+                      className="h-12 cursor-pointer"
+                    />
+                    <Button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600">
+                      Add Class
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
           
           <div className="flex justify-between items-center">
@@ -430,28 +457,41 @@ const Schedule = () => {
                             <h3 className="font-semibold text-lg">
                               {schedule.className}
                             </h3>
-                            <div className="flex gap-1.5 opacity-0 hover:opacity-100 transition-opacity">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 rounded-lg hover:bg-accent/20"
-                                onClick={() => {
-                                  setSelectedSchedule(schedule);
-                                  setFormData(schedule);
-                                  setIsEditDialogOpen(true);
-                                }}
-                              >
-                                <Edit className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive"
-                                onClick={() => handleDelete(schedule._id)}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
+                            {canEditSchedule ? (
+                              <div className="flex gap-1.5 opacity-0 hover:opacity-100 transition-opacity">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-lg hover:bg-accent/20"
+                                  onClick={() => {
+                                    setSelectedSchedule(schedule);
+                                    setFormData(schedule);
+                                    setIsEditDialogOpen(true);
+                                  }}
+                                >
+                                  <Edit className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive"
+                                  onClick={() => handleDelete(schedule._id)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex gap-1.5 opacity-0 hover:opacity-100 transition-opacity">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-lg hover:bg-accent/20"
+                                  title="View only - Students cannot edit schedules"
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            )}
                           </div>
                           <div className="space-y-2">
                             <div className="flex items-center gap-2 text-sm">
@@ -486,88 +526,90 @@ const Schedule = () => {
           })}
         </div>
 
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="border-0 shadow-2xl bg-gradient-to-b from-background to-background/95 backdrop-blur-xl">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-                Edit Class
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleEdit} className="space-y-4">
-              <Input
-                placeholder="Class Name"
-                name="className"
-                value={formData.className}
-                onChange={handleInputChange}
-                required
-                className="border-2 focus:ring-2 focus:ring-purple-500"
-              />
-              <Input
-                placeholder="Professor Name"
-                name="professor"
-                value={formData.professor}
-                onChange={handleInputChange}
-                required
-                className="border-2 focus:ring-2 focus:ring-purple-500"
-              />
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal border-2 focus:ring-2 focus:ring-purple-500"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={handleDateSelect}
-                    initialFocus
+        {canEditSchedule && (
+          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <DialogContent className="border-0 shadow-2xl bg-gradient-to-b from-background to-background/95 backdrop-blur-xl">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                  Edit Class
+                </DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleEdit} className="space-y-4">
+                <Input
+                  placeholder="Class Name"
+                  name="className"
+                  value={formData.className}
+                  onChange={handleInputChange}
+                  required
+                  className="border-2 focus:ring-2 focus:ring-purple-500"
+                />
+                <Input
+                  placeholder="Professor Name"
+                  name="professor"
+                  value={formData.professor}
+                  onChange={handleInputChange}
+                  required
+                  className="border-2 focus:ring-2 focus:ring-purple-500"
+                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal border-2 focus:ring-2 focus:ring-purple-500"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={handleDateSelect}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <div className="grid grid-cols-2 gap-4">
+                  <Input
+                    type="time"
+                    name="startTime"
+                    value={formData.startTime}
+                    onChange={handleInputChange}
+                    required
+                    className="border-2 focus:ring-2 focus:ring-purple-500"
                   />
-                </PopoverContent>
-              </Popover>
-              <div className="grid grid-cols-2 gap-4">
+                  <Input
+                    type="time"
+                    name="endTime"
+                    value={formData.endTime}
+                    onChange={handleInputChange}
+                    required
+                    className="border-2 focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
                 <Input
-                  type="time"
-                  name="startTime"
-                  value={formData.startTime}
+                  placeholder="Room Number / Location"
+                  name="location"
+                  value={formData.location}
                   onChange={handleInputChange}
                   required
                   className="border-2 focus:ring-2 focus:ring-purple-500"
                 />
                 <Input
-                  type="time"
-                  name="endTime"
-                  value={formData.endTime}
+                  type="color"
+                  name="color"
+                  value={formData.color}
                   onChange={handleInputChange}
-                  required
-                  className="border-2 focus:ring-2 focus:ring-purple-500"
+                  className="h-12 cursor-pointer"
                 />
-              </div>
-              <Input
-                placeholder="Room Number / Location"
-                name="location"
-                value={formData.location}
-                onChange={handleInputChange}
-                required
-                className="border-2 focus:ring-2 focus:ring-purple-500"
-              />
-              <Input
-                type="color"
-                name="color"
-                value={formData.color}
-                onChange={handleInputChange}
-                className="h-12 cursor-pointer"
-              />
-              <Button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600">
-                Update Class
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <Button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600">
+                  Update Class
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
     </div>
   );
