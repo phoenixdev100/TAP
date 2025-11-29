@@ -415,7 +415,7 @@ const Assignments = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
-            Assignments & Exams
+            Assignments
             {user?.role === 'student' && (
               <span className="ml-2 text-sm text-muted-foreground font-normal block sm:inline">
                 (Student View)

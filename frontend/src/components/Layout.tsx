@@ -58,8 +58,8 @@ const Layout = ({ children }: LayoutProps) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-blue-50">
-      <header className="px-6 py-4 md:py-6 md:px-10">
-        <div className="container mx-auto flex justify-between items-center">
+      <header className="py-4 md:py-6">
+        <div className="container mx-auto px-6 md:px-10 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate(getDashboardRoute())}
