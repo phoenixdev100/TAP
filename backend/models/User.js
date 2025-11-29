@@ -20,6 +20,12 @@ const UserSchema = new mongoose.Schema({
         required: true,
         minlength: 6
     },
+    role: {
+        type: String,
+        required: true,
+        enum: ['student', 'teacher', 'college_admin'],
+        default: 'student'
+    },
     createdAt: {
         type: Date,
         default: Date.now

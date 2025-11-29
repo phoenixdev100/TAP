@@ -15,6 +15,12 @@ import AuthCheck from "./components/AuthCheck";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import GPACalculator from "./pages/GPACalculator";
 import Profile from "./pages/Profile";
+import AuthProvider from "./contexts/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
+import StudentDashboard from "./pages/StudentDashboard";
+import TeacherDashboard from "./pages/TeacherDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
+import Unauthorized from "./pages/Unauthorized";
 
 const queryClient = new QueryClient();
 
@@ -28,97 +34,127 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <Router>
-      <TooltipProvider>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route
-            path="/dashboard"
-            element={
-              <PrivateRoute>
-                <Layout>
-                  <Dashboard />
-                </Layout>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/schedule"
-            element={
-              <PrivateRoute>
-                <Layout>
-                  <Schedule />
-                </Layout>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/assignments"
-            element={
-              <PrivateRoute>
-                <Layout>
-                  <Assignments />
-                </Layout>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/notes"
-            element={
-              <PrivateRoute>
-                <Layout>
-                  <Notes />
-                </Layout>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/attendance"
-            element={
-              <PrivateRoute>
-                <Layout>
-                  <Attendance />
-                </Layout>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/resources"
-            element={
-              <PrivateRoute>
-                <Layout>
-                  <Resources />
-                </Layout>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/gpa-calculator"
-            element={
-              <PrivateRoute>
-                <Layout>
-                  <GPACalculator />
-                </Layout>
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <PrivateRoute>
-                <Layout>
-                  <Profile />
-                </Layout>
-              </PrivateRoute>
-            }
-          />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        <Toaster />
-        <Sonner />
-      </TooltipProvider>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <TooltipProvider>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<HomePage />} />
+            <Route path="/unauthorized" element={<Unauthorized />} />
+            
+            {/* Student Routes */}
+            <Route
+              path="/student-dashboard"
+              element={
+                <ProtectedRoute requiredRole="student">
+                  <StudentDashboard />
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* Teacher Routes */}
+            <Route
+              path="/teacher-dashboard"
+              element={
+                <ProtectedRoute requiredRole="teacher">
+                  <TeacherDashboard />
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* Admin Routes */}
+            <Route
+              path="/admin-dashboard"
+              element={
+                <ProtectedRoute requiredRole="college_admin">
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* Protected Routes with RBAC */}
+            <Route
+              path="/schedule"
+              element={
+                <ProtectedRoute resource="schedule">
+                  <Layout>
+                    <Schedule />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/assignments"
+              element={
+                <ProtectedRoute resource="assignments">
+                  <Layout>
+                    <Assignments />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/notes"
+              element={
+                <ProtectedRoute resource="notes">
+                  <Layout>
+                    <Notes />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/attendance"
+              element={
+                <ProtectedRoute resource="attendance">
+                  <Layout>
+                    <Attendance />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/resources"
+              element={
+                <ProtectedRoute resource="resources">
+                  <Layout>
+                    <Resources />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/gpa-calculator"
+              element={
+                <ProtectedRoute resource="gpa-calculator">
+                  <Layout>
+                    <GPACalculator />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Profile />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* Legacy Dashboard Route - Redirect based on role */}
+            <Route path="/dashboard" element={<Navigate to="/" replace />} />
+            
+            {/* Catch-all */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          <Toaster />
+          <Sonner />
+        </TooltipProvider>
+      </Router>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

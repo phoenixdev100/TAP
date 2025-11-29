@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -13,7 +13,8 @@ import { BookOpen, CalendarDays, ListTodo, FileText, UserCheck, Sparkles } from 
 import { motion, Variants } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
-import api from "@/api/axios";
+import { useAuth } from "@/contexts/AuthContext";
+import { UserRole } from "@/contexts/AuthContext";
 
 interface AuthResponse {
   success: boolean;
@@ -28,13 +29,23 @@ interface AuthResponse {
 
 const HomePage = () => {
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [role, setRole] = useState<UserRole>('student');
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
+  
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { login, signup, user, isLoading: authLoading } = useAuth();
+
+  // Redirect logged-in users to their appropriate dashboard
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigateToDashboard(user.role);
+    }
+  }, [user, authLoading, navigate]);
 
   // Mock user data - in a real app, this would come from a backend
   const mockUsers = [
@@ -42,7 +53,7 @@ const HomePage = () => {
   ];
 
   const validateForm = () => {
-    const newErrors: { [key: string]: string } = {};
+    const newErrors: Record<string, string> = {};
 
     if (activeTab === 'signup') {
       if (!name.trim()) {
@@ -68,60 +79,62 @@ const HomePage = () => {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-
-    setIsLoading(true);
     setErrors({});
+    setIsLoading(true);
 
     try {
       if (activeTab === 'login') {
-        const response = await api.post<AuthResponse>('/api/auth/login', {
-          email,
-          password
+        await login(email, password);
+        toast({
+          title: "Login successful",
+          description: "Welcome back!",
+          duration: 5000, // Auto-dismiss after 5 seconds
         });
-
-        if (response.data.success) {
-          localStorage.setItem('token', response.data.token || '');
-          localStorage.setItem('user', JSON.stringify(response.data.user));
-          toast({
-            title: "Success",
-            description: response.data.message,
-          });
-          navigate("/dashboard");
-        }
+        // Navigate based on user role
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        navigateToDashboard(user.role);
       } else {
-        const response = await api.post<AuthResponse>('/api/auth/signup', {
-          username: name,
-          email,
-          password
-        });
-
-        if (response.data.success) {
-          localStorage.setItem('token', response.data.token || '');
-          localStorage.setItem('user', JSON.stringify(response.data.user));
-          toast({
-            title: "Success",
-            description: response.data.message,
-          });
-          navigate("/dashboard");
+        if (!name.trim()) {
+          setErrors({ name: 'Name is required' });
+          return;
         }
+        await signup(name, email, password, role);
+        toast({
+          title: "Account created",
+          description: "Your account has been created successfully!",
+          duration: 5000, // Auto-dismiss after 5 seconds
+        });
+        navigateToDashboard(role);
       }
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || "An unexpected error occurred";
+      const errorMessage = error.response?.data?.message || 'Authentication failed';
       toast({
         title: "Error",
         description: errorMessage,
         variant: "destructive",
+        duration: 5000, // Auto-dismiss after 5 seconds
       });
-      
-      if (activeTab === 'login') {
-        setPassword('');
+      if (error.response?.data?.field) {
+        setErrors({ [error.response.data.field]: errorMessage });
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const navigateToDashboard = (userRole: UserRole) => {
+    switch (userRole) {
+      case 'student':
+        navigate('/student-dashboard');
+        break;
+      case 'teacher':
+        navigate('/teacher-dashboard');
+        break;
+      case 'college_admin':
+        navigate('/admin-dashboard');
+        break;
+      default:
+        navigate('/student-dashboard');
     }
   };
 
@@ -173,6 +186,30 @@ const HomePage = () => {
       }
     }
   };
+
+  // Show loading state while checking authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If user is logged in, they will be redirected by useEffect
+  if (user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Redirecting to dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-blue-50 relative overflow-hidden">
@@ -349,6 +386,34 @@ const HomePage = () => {
                       <p className="text-sm text-red-500">{errors.password}</p>
                     )}
                   </motion.div>
+                  {activeTab === 'signup' && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: 0.3 }}
+                      className="space-y-2"
+                    >
+                      <label htmlFor="role" className="text-sm font-medium">
+                        Role
+                      </label>
+                      <select
+                        id="role"
+                        value={role}
+                        onChange={(e) => setRole(e.target.value as UserRole)}
+                        className="w-full px-3 py-2 bg-background/50 backdrop-blur-sm border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50"
+                        disabled={isLoading}
+                      >
+                        <option value="student">Student</option>
+                        <option value="teacher">Teacher</option>
+                        <option value="college_admin">College Administrator</option>
+                      </select>
+                      <p className="text-xs text-muted-foreground">
+                        {role === 'student' && 'View your classes, assignments, and attendance'}
+                        {role === 'teacher' && 'Manage classes, assignments, and track student progress'}
+                        {role === 'college_admin' && 'Full platform management and administration'}
+                      </p>
+                    </motion.div>
+                  )}
                 </CardContent>
                 <CardFooter className="flex flex-col">
                   <Button 

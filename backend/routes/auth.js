@@ -7,14 +7,23 @@ const jwt = require('jsonwebtoken');
 router.post('/signup', async (req, res) => {
     try {
         console.log('Signup request received:', { body: { ...req.body, password: '***' } });
-        const { username, email, password } = req.body;
+        const { username, email, password, role } = req.body;
 
         // Input validation
-        if (!username || !email || !password) {
-            console.log('Validation failed:', { username, email, password: !!password });
+        if (!username || !email || !password || !role) {
+            console.log('Validation failed:', { username, email, password: !!password, role });
             return res.status(400).json({
                 success: false,
                 message: 'All fields are required'
+            });
+        }
+
+        // Validate role
+        const validRoles = ['student', 'teacher', 'college_admin'];
+        if (!validRoles.includes(role)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid role specified'
             });
         }
 
@@ -32,7 +41,8 @@ router.post('/signup', async (req, res) => {
         const user = new User({
             username,
             email,
-            password
+            password,
+            role
         });
 
         await user.save();
@@ -40,19 +50,28 @@ router.post('/signup', async (req, res) => {
 
         // Generate JWT token
         const token = jwt.sign(
-            { userId: user._id },
+            { userId: user._id, role: user.role },
             process.env.JWT_SECRET,
             { expiresIn: '24h' }
+        );
+
+        // Generate refresh token (longer expiry)
+        const refreshToken = jwt.sign(
+            { userId: user._id, type: 'refresh' },
+            process.env.JWT_SECRET,
+            { expiresIn: '7d' }
         );
 
         res.status(201).json({
             success: true,
             message: 'User created successfully',
             token,
+            refreshToken,
             user: {
                 id: user._id,
                 username: user.username,
-                email: user.email
+                email: user.email,
+                role: user.role
             }
         });
     } catch (error) {
@@ -102,9 +121,16 @@ router.post('/login', async (req, res) => {
 
         // Generate JWT token
         const token = jwt.sign(
-            { userId: user._id },
+            { userId: user._id, role: user.role },
             process.env.JWT_SECRET,
             { expiresIn: '24h' }
+        );
+
+        // Generate refresh token (longer expiry)
+        const refreshToken = jwt.sign(
+            { userId: user._id, type: 'refresh' },
+            process.env.JWT_SECRET,
+            { expiresIn: '7d' }
         );
 
         console.log('Login successful:', { userId: user._id });
@@ -112,10 +138,12 @@ router.post('/login', async (req, res) => {
             success: true,
             message: 'Login successful',
             token,
+            refreshToken,
             user: {
                 id: user._id,
                 username: user.username,
-                email: user.email
+                email: user.email,
+                role: user.role
             }
         });
     } catch (error) {

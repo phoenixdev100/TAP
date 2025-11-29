@@ -7,6 +7,8 @@ require('dotenv').config();
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const scheduleRoutes = require('./routes/schedule');
+const attendanceRoutes = require('./routes/attendance');
+const assignmentRoutes = require('./routes/assignments');
 
 const app = express();
 
@@ -96,6 +98,8 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/schedule', scheduleRoutes);
+app.use('/api/attendance', attendanceRoutes);
+app.use('/api/assignments', assignmentRoutes);
 
 // Root route
 app.get('/', (req, res) => {
