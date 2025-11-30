@@ -4,12 +4,217 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, Search, Upload, Bookmark, ThumbsUp, Clock, Download, Eye, Star, Filter, Plus, X } from "lucide-react";
+import { FileText, Search, Upload, Bookmark, ThumbsUp, Clock, Download, Eye, Star, Filter, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+
+// Reusable Note Card Component
+const NoteCard = ({ note, onLike, onBookmark, onDownload }) => {
+  return (
+    <Card className="group hover:shadow-lg transition-all duration-300 border-2 hover:border-purple-200 dark:hover:border-purple-800 overflow-hidden">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <CardTitle className="text-lg font-semibold line-clamp-2 group-hover:text-purple-600 transition-colors">
+              {note.title}
+            </CardTitle>
+            <CardDescription className="mt-1 flex items-center gap-2">
+              <Badge variant="secondary" className="text-xs">
+                {note.subject}
+              </Badge>
+              <span className="text-xs text-muted-foreground">
+                {note.pages || 0} pages
+              </span>
+            </CardDescription>
+          </div>
+          <div className="flex flex-col items-end gap-1">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+              {note.rating || '0.0'}
+            </div>
+            <span className="text-xs text-muted-foreground">{note.fileType?.split('/')[1]?.toUpperCase() || 'PDF'}</span>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <p className="text-sm text-muted-foreground line-clamp-3 mb-3">
+          {note.description}
+        </p>
+        <div className="flex flex-wrap gap-1 mb-3">
+          {note.tags?.slice(0, 2).map((tag: string) => (
+            <Badge key={tag} variant="outline" className="text-xs">
+              {tag}
+            </Badge>
+          )) || []}
+          {note.tags?.length > 2 && (
+            <Badge variant="outline" className="text-xs">
+              +{note.tags.length - 2}
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            {new Date(note.uploadDate).toLocaleDateString()}
+          </div>
+          <div className="flex items-center gap-1">
+            <Download className="h-3 w-3" />
+            {note.downloads || 0}
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter className="pt-3 border-t">
+        <div className="flex items-center justify-between w-full">
+          <span className="text-xs text-muted-foreground">
+            {note.authorName || note.author?.username || 'Unknown'}
+          </span>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onLike(note._id)}
+              className={`h-8 w-8 p-0 transition-colors ${
+                note.isLiked ? 'text-red-500 hover:text-red-600' : 'hover:text-red-500'
+              }`}
+            >
+              <ThumbsUp className={`h-4 w-4 ${note.isLiked ? 'fill-current' : ''}`} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onBookmark(note._id)}
+              className={`h-8 w-8 p-0 transition-colors ${
+                note.isBookmarked ? 'text-purple-500 hover:text-purple-600' : 'hover:text-purple-500'
+              }`}
+            >
+              <Bookmark className={`h-4 w-4 ${note.isBookmarked ? 'fill-current' : ''}`} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onDownload(note._id, note.fileName)}
+              className="h-8 w-8 p-0 hover:text-green-600 transition-colors"
+            >
+              <Download className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </CardFooter>
+    </Card>
+  );
+};
+
+// Reusable Empty State Component
+const EmptyState = ({ type, searchQuery, user, onUpload, onBrowseNotes }) => {
+  const configs = {
+    all: {
+      icon: FileText,
+      color: 'blue',
+      title: 'No Notes Found',
+      description: searchQuery ? "No notes match your search criteria." : "No notes available yet. Be the first to upload!",
+      showUpload: !searchQuery && user?.role !== 'student',
+      uploadText: 'Upload First Note'
+    },
+    my: {
+      icon: Upload,
+      color: 'purple',
+      title: 'No Uploads Yet',
+      description: "You haven't uploaded any notes or study materials yet. Share your knowledge with your peers!",
+      showUpload: user?.role !== 'student',
+      uploadText: 'Upload Your First Note'
+    },
+    bookmarked: {
+      icon: Bookmark,
+      color: 'amber',
+      title: 'No Bookmarks Yet',
+      description: "You haven't bookmarked any notes or study materials yet. Save your favorite notes for quick access!",
+      showUpload: false,
+      actionText: 'Browse Notes',
+      onAction: onBrowseNotes
+    },
+    popular: {
+      icon: Star,
+      color: 'yellow',
+      title: 'No Popular Notes Yet',
+      description: "Popular notes will appear here once they get more downloads and ratings.",
+      showUpload: false,
+      actionText: 'Browse All Notes',
+      onAction: onBrowseNotes
+    }
+  };
+
+  const config = configs[type];
+  const Icon = config.icon;
+
+  return (
+    <div className="text-center py-12 sm:py-16">
+      <div className={`mx-auto w-16 h-16 bg-gradient-to-br from-${config.color}-100 to-${config.color}-200 dark:from-${config.color}-900/20 dark:to-${config.color}-800/20 rounded-full flex items-center justify-center mb-4`}>
+        <Icon className={`h-8 w-8 text-${config.color}-600 dark:text-${config.color}-400`} />
+      </div>
+      <h3 className="text-lg sm:text-xl font-semibold mb-2">{config.title}</h3>
+      <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+        {config.description}
+      </p>
+      {config.showUpload && (
+        <Button 
+          onClick={onUpload}
+          className="bg-gradient-to-r from-[#7C3AED] to-[#A855F7] hover:from-[#6D28D9] hover:to-[#9333EA] text-white shadow-lg transition-all duration-300"
+        >
+          <Plus className="mr-2 h-4 w-4" /> {config.uploadText}
+        </Button>
+      )}
+      {config.onAction && (
+        <Button 
+          variant="outline"
+          className="border-2 hover:border-[#7C3AED] hover:text-[#7C3AED] transition-colors"
+          onClick={config.onAction}
+        >
+          <Eye className="mr-2 h-4 w-4" /> {config.actionText}
+        </Button>
+      )}
+    </div>
+  );
+};
+
+// Reusable Tab Content Component
+const TabContent = ({ loading, notes, type, searchQuery, user, onUpload, onLike, onBookmark, onDownload, onBrowseNotes }) => {
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
+
+  if (notes.length === 0) {
+    return (
+      <EmptyState 
+        type={type}
+        searchQuery={searchQuery}
+        user={user}
+        onUpload={onUpload}
+        onBrowseNotes={onBrowseNotes}
+      />
+    );
+  }
+
+  return (
+    <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+      {notes.map((note) => (
+        <NoteCard 
+          key={note._id} 
+          note={note} 
+          onLike={onLike}
+          onBookmark={onBookmark}
+          onDownload={onDownload}
+        />
+      ))}
+    </div>
+  );
+};
 
 const Notes = () => {
   const { toast } = useToast();
@@ -31,6 +236,7 @@ const Notes = () => {
   
   const categories = [
     { id: "all", label: "All Notes", icon: FileText },
+    { id: "my", label: "My Uploads", icon: Upload },
     { id: "bookmarked", label: "Bookmarked", icon: Bookmark },
     { id: "popular", label: "Popular", icon: Star },
   ];
@@ -97,7 +303,7 @@ const Notes = () => {
           title: data.message,
           duration: 2000,
         });
-        fetchNotes(); // Refresh notes
+        fetchNotes();
       } else {
         const errorData = await response.json();
         toast({
@@ -132,7 +338,7 @@ const Notes = () => {
           title: data.message,
           duration: 2000,
         });
-        fetchNotes(); // Refresh notes
+        fetchNotes();
       } else {
         const errorData = await response.json();
         toast({
@@ -176,7 +382,7 @@ const Notes = () => {
           description: "Your note download has started.",
           duration: 2000,
         });
-        fetchNotes(); // Refresh to update download count
+        fetchNotes();
       } else {
         const errorData = await response.json();
         toast({
@@ -251,7 +457,7 @@ const Notes = () => {
           isPublic: true,
           file: null
         });
-        fetchNotes(); // Refresh notes
+        fetchNotes();
       } else {
         const errorData = await response.json();
         toast({
@@ -278,7 +484,7 @@ const Notes = () => {
       if (searchQuery !== undefined) {
         fetchNotes();
       }
-    }, 500); // 500ms delay
+    }, 500);
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
@@ -337,7 +543,7 @@ const Notes = () => {
 
       {/* Category Tabs */}
       <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 h-auto p-1 bg-muted rounded-lg">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto p-1 bg-muted rounded-lg">
           {categories.map((category) => {
             const Icon = category.icon;
             return (
@@ -354,368 +560,65 @@ const Notes = () => {
           })}
         </TabsList>
         
-        {/* All Notes Tab */}
+        {/* Tab Contents - Now using reusable component */}
         <TabsContent value="all" className="pt-6">
-          {loading ? (
-            <div className="flex justify-center items-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-            </div>
-          ) : notes.length === 0 ? (
-            <div className="text-center py-12 sm:py-16">
-              <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/20 dark:to-blue-800/20 rounded-full flex items-center justify-center mb-4">
-                <FileText className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-              </div>
-              <h3 className="text-lg sm:text-xl font-semibold mb-2">No Notes Found</h3>
-              <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-                {searchQuery ? "No notes match your search criteria." : "No notes available yet. Be the first to upload!"}
-              </p>
-              {!searchQuery && user?.role !== 'student' && (
-                <Button 
-                  onClick={handleUpload}
-                  className="bg-gradient-to-r from-[#7C3AED] to-[#A855F7] hover:from-[#6D28D9] hover:to-[#9333EA] text-white shadow-lg transition-all duration-300"
-                >
-                  <Plus className="mr-2 h-4 w-4" /> Upload First Note
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-              {notes.map((note) => (
-                <Card key={note._id} className="group hover:shadow-lg transition-all duration-300 border-2 hover:border-purple-200 dark:hover:border-purple-800 overflow-hidden">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg font-semibold line-clamp-2 group-hover:text-purple-600 transition-colors">
-                          {note.title}
-                        </CardTitle>
-                        <CardDescription className="mt-1 flex items-center gap-2">
-                          <Badge variant="secondary" className="text-xs">
-                            {note.subject}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {note.pages || 0} pages
-                          </span>
-                        </CardDescription>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                          {note.rating || '0.0'}
-                        </div>
-                        <span className="text-xs text-muted-foreground">{note.fileType?.split('/')[1]?.toUpperCase() || 'PDF'}</span>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <p className="text-sm text-muted-foreground line-clamp-3 mb-3">
-                      {note.description}
-                    </p>
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {note.tags?.slice(0, 2).map((tag: string) => (
-                        <Badge key={tag} variant="outline" className="text-xs">
-                          {tag}
-                        </Badge>
-                      )) || []}
-                      {note.tags?.length > 2 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{note.tags.length - 2}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {new Date(note.uploadDate).toLocaleDateString()}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Download className="h-3 w-3" />
-                        {note.downloads || 0}
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="pt-3 border-t">
-                    <div className="flex items-center justify-between w-full">
-                      <span className="text-xs text-muted-foreground">
-                        by {note.authorName || note.author?.username || 'Unknown'}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleLike(note._id)}
-                          className={`h-8 w-8 p-0 transition-colors ${
-                            note.isLiked ? 'text-red-500 hover:text-red-600' : 'hover:text-red-500'
-                          }`}
-                        >
-                          <ThumbsUp className={`h-4 w-4 ${note.isLiked ? 'fill-current' : ''}`} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleBookmark(note._id)}
-                          className={`h-8 w-8 p-0 transition-colors ${
-                            note.isBookmarked ? 'text-purple-500 hover:text-purple-600' : 'hover:text-purple-500'
-                          }`}
-                        >
-                          <Bookmark className={`h-4 w-4 ${note.isBookmarked ? 'fill-current' : ''}`} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDownload(note._id, note.fileName)}
-                          className="h-8 w-8 p-0 hover:text-green-600 transition-colors"
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-          )}
+          <TabContent 
+            loading={loading}
+            notes={notes}
+            type="all"
+            searchQuery={searchQuery}
+            user={user}
+            onUpload={handleUpload}
+            onLike={handleLike}
+            onBookmark={handleBookmark}
+            onDownload={handleDownload}
+            onBrowseNotes={() => setSelectedCategory('all')}
+          />
         </TabsContent>
         
-        {/* Bookmarked Tab */}
+        <TabsContent value="my" className="pt-6">
+          <TabContent 
+            loading={loading}
+            notes={notes}
+            type="my"
+            searchQuery={searchQuery}
+            user={user}
+            onUpload={handleUpload}
+            onLike={handleLike}
+            onBookmark={handleBookmark}
+            onDownload={handleDownload}
+            onBrowseNotes={() => setSelectedCategory('all')}
+          />
+        </TabsContent>
+        
         <TabsContent value="bookmarked" className="pt-6">
-          {loading ? (
-            <div className="flex justify-center items-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-            </div>
-          ) : notes.length === 0 ? (
-            <div className="text-center py-12 sm:py-16">
-              <div className="mx-auto w-16 h-16 bg-gradient-to-br from-amber-100 to-amber-200 dark:from-amber-900/20 dark:to-amber-800/20 rounded-full flex items-center justify-center mb-4">
-                <Bookmark className="h-8 w-8 text-amber-600 dark:text-amber-400" />
-              </div>
-              <h3 className="text-lg sm:text-xl font-semibold mb-2">No Bookmarks Yet</h3>
-              <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-                You haven't bookmarked any notes or study materials yet. Save your favorite notes for quick access!
-              </p>
-              <Button 
-                variant="outline"
-                className="border-2 hover:border-[#7C3AED] hover:text-[#7C3AED] transition-colors"
-                onClick={() => setSelectedCategory('all')}
-              >
-                <Eye className="mr-2 h-4 w-4" /> Browse Notes
-              </Button>
-            </div>
-          ) : (
-            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-              {notes.map((note) => (
-                <Card key={note._id} className="group hover:shadow-lg transition-all duration-300 border-2 hover:border-purple-200 dark:hover:border-purple-800 overflow-hidden">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg font-semibold line-clamp-2 group-hover:text-purple-600 transition-colors">
-                          {note.title}
-                        </CardTitle>
-                        <CardDescription className="mt-1 flex items-center gap-2">
-                          <Badge variant="secondary" className="text-xs">
-                            {note.subject}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {note.pages || 0} pages
-                          </span>
-                        </CardDescription>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                          {note.rating || '0.0'}
-                        </div>
-                        <span className="text-xs text-muted-foreground">{note.fileType?.split('/')[1]?.toUpperCase() || 'PDF'}</span>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <p className="text-sm text-muted-foreground line-clamp-3 mb-3">
-                      {note.description}
-                    </p>
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {note.tags?.slice(0, 2).map((tag: string) => (
-                        <Badge key={tag} variant="outline" className="text-xs">
-                          {tag}
-                        </Badge>
-                      )) || []}
-                      {note.tags?.length > 2 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{note.tags.length - 2}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {new Date(note.uploadDate).toLocaleDateString()}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Download className="h-3 w-3" />
-                        {note.downloads || 0}
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="pt-3 border-t">
-                    <div className="flex items-center justify-between w-full">
-                      <span className="text-xs text-muted-foreground">
-                        by {note.authorName || note.author?.username || 'Unknown'}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleLike(note._id)}
-                          className={`h-8 w-8 p-0 transition-colors ${
-                            note.isLiked ? 'text-red-500 hover:text-red-600' : 'hover:text-red-500'
-                          }`}
-                        >
-                          <ThumbsUp className={`h-4 w-4 ${note.isLiked ? 'fill-current' : ''}`} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleBookmark(note._id)}
-                          className={`h-8 w-8 p-0 transition-colors ${
-                            note.isBookmarked ? 'text-purple-500 hover:text-purple-600' : 'hover:text-purple-500'
-                          }`}
-                        >
-                          <Bookmark className={`h-4 w-4 ${note.isBookmarked ? 'fill-current' : ''}`} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDownload(note._id, note.fileName)}
-                          className="h-8 w-8 p-0 hover:text-green-600 transition-colors"
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-          )}
+          <TabContent 
+            loading={loading}
+            notes={notes}
+            type="bookmarked"
+            searchQuery={searchQuery}
+            user={user}
+            onUpload={handleUpload}
+            onLike={handleLike}
+            onBookmark={handleBookmark}
+            onDownload={handleDownload}
+            onBrowseNotes={() => setSelectedCategory('all')}
+          />
         </TabsContent>
         
-        {/* Popular Tab */}
         <TabsContent value="popular" className="pt-6">
-          {loading ? (
-            <div className="flex justify-center items-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-            </div>
-          ) : notes.length === 0 ? (
-            <div className="text-center py-12 sm:py-16">
-              <div className="mx-auto w-16 h-16 bg-gradient-to-br from-yellow-100 to-yellow-200 dark:from-yellow-900/20 dark:to-yellow-800/20 rounded-full flex items-center justify-center mb-4">
-                <Star className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
-              </div>
-              <h3 className="text-lg sm:text-xl font-semibold mb-2">No Popular Notes Yet</h3>
-              <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-                Popular notes will appear here once they get more downloads and ratings.
-              </p>
-              <Button 
-                variant="outline"
-                className="border-2 hover:border-[#7C3AED] hover:text-[#7C3AED] transition-colors"
-                onClick={() => setSelectedCategory('all')}
-              >
-                <Eye className="mr-2 h-4 w-4" /> Browse All Notes
-              </Button>
-            </div>
-          ) : (
-            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-              {notes.map((note) => (
-                <Card key={note._id} className="group hover:shadow-lg transition-all duration-300 border-2 hover:border-purple-200 dark:hover:border-purple-800 overflow-hidden">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg font-semibold line-clamp-2 group-hover:text-purple-600 transition-colors">
-                          {note.title}
-                        </CardTitle>
-                        <CardDescription className="mt-1 flex items-center gap-2">
-                          <Badge variant="secondary" className="text-xs">
-                            {note.subject}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {note.pages || 0} pages
-                          </span>
-                        </CardDescription>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                          {note.rating || '0.0'}
-                        </div>
-                        <span className="text-xs text-muted-foreground">{note.fileType?.split('/')[1]?.toUpperCase() || 'PDF'}</span>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <p className="text-sm text-muted-foreground line-clamp-3 mb-3">
-                      {note.description}
-                    </p>
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {note.tags?.slice(0, 2).map((tag: string) => (
-                        <Badge key={tag} variant="outline" className="text-xs">
-                          {tag}
-                        </Badge>
-                      )) || []}
-                      {note.tags?.length > 2 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{note.tags.length - 2}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {new Date(note.uploadDate).toLocaleDateString()}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Download className="h-3 w-3" />
-                        {note.downloads || 0}
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="pt-3 border-t">
-                    <div className="flex items-center justify-between w-full">
-                      <span className="text-xs text-muted-foreground">
-                        by {note.authorName || note.author?.username || 'Unknown'}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleLike(note._id)}
-                          className={`h-8 w-8 p-0 transition-colors ${
-                            note.isLiked ? 'text-red-500 hover:text-red-600' : 'hover:text-red-500'
-                          }`}
-                        >
-                          <ThumbsUp className={`h-4 w-4 ${note.isLiked ? 'fill-current' : ''}`} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleBookmark(note._id)}
-                          className={`h-8 w-8 p-0 transition-colors ${
-                            note.isBookmarked ? 'text-purple-500 hover:text-purple-600' : 'hover:text-purple-500'
-                          }`}
-                        >
-                          <Bookmark className={`h-4 w-4 ${note.isBookmarked ? 'fill-current' : ''}`} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDownload(note._id, note.fileName)}
-                          className="h-8 w-8 p-0 hover:text-green-600 transition-colors"
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-          )}
+          <TabContent 
+            loading={loading}
+            notes={notes}
+            type="popular"
+            searchQuery={searchQuery}
+            user={user}
+            onUpload={handleUpload}
+            onLike={handleLike}
+            onBookmark={handleBookmark}
+            onDownload={handleDownload}
+            onBrowseNotes={() => setSelectedCategory('all')}
+          />
         </TabsContent>
       </Tabs>
       
