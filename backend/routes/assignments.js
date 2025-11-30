@@ -5,11 +5,57 @@ const mongoose = require('mongoose');
 const Assignment = require('../models/Assignment');
 const User = require('../models/User');
 
+// Input validation and sanitization helper
+const validateAndSanitize = {
+  // Sanitize string inputs
+  string: (input, maxLength = 1000) => {
+    if (typeof input !== 'string') return '';
+    return input.trim().substring(0, maxLength);
+  },
+  
+  // Validate and sanitize ObjectId
+  objectId: (input) => {
+    if (!mongoose.Types.ObjectId.isValid(input)) return null;
+    return input;
+  },
+  
+  // Validate date
+  date: (input) => {
+    const date = new Date(input);
+    return isNaN(date.getTime()) ? null : date;
+  },
+  
+  // Validate array of ObjectIds
+  objectIdArray: (input) => {
+    if (!Array.isArray(input)) return [];
+    return input.filter(id => mongoose.Types.ObjectId.isValid(id));
+  },
+  
+  // Validate role
+  role: (input) => {
+    const validRoles = ['student', 'teacher', 'college_admin'];
+    return validRoles.includes(input) ? input : 'student';
+  },
+  
+  // Validate numeric input
+  number: (input, min = 0, max = 100) => {
+    const num = parseInt(input);
+    return isNaN(num) || num < min || num > max ? null : num;
+  }
+};
+
 // Get assignment statistics
 router.get('/stats', auth, async (req, res) => {
   try {
-    const userRole = req.user.role || 'student';
-    const userId = req.user.userId;
+    const userRole = validateAndSanitize.role(req.user.role);
+    const userId = validateAndSanitize.objectId(req.user.userId);
+    
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user ID'
+      });
+    }
     
     const stats = await Assignment.getStats(userId, userRole);
     
@@ -29,8 +75,16 @@ router.get('/stats', auth, async (req, res) => {
 // Get assignments list (role-based access)
 router.get('/', auth, async (req, res) => {
   try {
-    const userRole = req.user.role || 'student';
-    const userId = req.user.userId;
+    const userRole = validateAndSanitize.role(req.user.role);
+    const userId = validateAndSanitize.objectId(req.user.userId);
+    
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user ID'
+      });
+    }
+    
     let assignments;
 
     if (userRole === 'student') {
@@ -48,71 +102,39 @@ router.get('/', auth, async (req, res) => {
           title: assignment.title,
           description: assignment.description,
           dueDate: assignment.dueDate.toISOString().split('T')[0],
-          status: submission ? 'completed' : 'pending',
-          score: submission?.score || null,
           className: assignment.className,
-          submittedAt: submission?.submittedAt,
-          submissionFile: submission?.fileUrl || null
+          status: assignment.status,
+          submission: submission ? {
+            submittedAt: submission.submittedAt,
+            status: submission.status,
+            score: submission.score
+          } : null
         };
       });
-      
-    } else if (userRole === 'teacher') {
-      // Teacher sees assignments they created
-      assignments = await Assignment.find({ 
-        createdBy: userId,
-        status: 'published'
-      }).populate('assignedTo', 'username').populate('submissions.student', 'username').sort({ createdAt: -1 });
-      
-      // Format for teacher view
+    } else if (userRole === 'teacher' || userRole === 'college_admin') {
+      // Teachers see assignments they created
+      // Admins see all assignments
+      const query = userRole === 'teacher' 
+        ? { createdBy: userId }
+        : {};
+        
+      assignments = await Assignment.find(query)
+        .populate('createdBy', 'username')
+        .populate('assignedTo', 'username email')
+        .sort({ createdAt: -1 });
+        
+      // Format for teacher/admin view
       assignments = assignments.map(assignment => ({
         id: assignment._id,
         title: assignment.title,
         description: assignment.description,
         dueDate: assignment.dueDate.toISOString().split('T')[0],
         className: assignment.className,
-        totalSubmissions: assignment.submissions.length,
-        gradedSubmissions: assignment.submissions.filter(sub => sub.score !== undefined).length,
-        pendingGrading: assignment.submissions.filter(sub => sub.score === undefined).length,
-        submissions: assignment.submissions.map(sub => ({
-          student: sub.student.username,
-          studentId: sub.student._id,
-          submittedAt: sub.submittedAt,
-          score: sub.score,
-
-          
-          fileData: !!sub.fileData,
-          originalFileName: sub.originalFileName,
-          fileSize: sub.fileSize
-        }))
-      }));
-      
-    } else if (userRole === 'college_admin') {
-      // Admin sees all assignments with full control
-      assignments = await Assignment.find({ 
-        status: 'published'
-      }).populate('createdBy', 'username').populate('assignedTo', 'username').populate('submissions.student', 'username').sort({ createdAt: -1 });
-      
-      // Format for admin view
-      assignments = assignments.map(assignment => ({
-        id: assignment._id,
-        title: assignment.title,
-        description: assignment.description,
-        dueDate: assignment.dueDate.toISOString().split('T')[0],
-        className: assignment.className,
-        teacher: assignment.createdBy.username,
-        totalSubmissions: assignment.submissions.length,
-        gradedSubmissions: assignment.submissions.filter(sub => sub.score !== undefined).length,
-        pendingGrading: assignment.submissions.filter(sub => sub.score === undefined).length,
-        submissions: assignment.submissions.map(sub => ({
-          student: sub.student.username,
-          studentId: sub.student._id,
-          submittedAt: sub.submittedAt,
-          score: sub.score,
-          fileData: !!sub.fileData,
-          originalFileName: sub.originalFileName,
-          fileSize: sub.fileSize,
-          gradedBy: sub.gradedBy?.username
-        }))
+        status: assignment.status,
+        createdBy: assignment.createdBy,
+        assignedTo: assignment.assignedTo,
+        submissionsCount: assignment.submissions.length,
+        createdAt: assignment.createdAt
       }));
     }
 
@@ -135,46 +157,50 @@ router.post('/', auth, async (req, res) => {
     const { title, description, dueDate, className, assignedTo } = req.body;
     
     // Validate permissions
-    if (req.user.role !== 'teacher' && req.user.role !== 'college_admin') {
+    if (!['teacher', 'college_admin'].includes(req.user.role)) {
       return res.status(403).json({
         success: false,
         message: 'Only teachers and admins can create assignments'
       });
     }
 
+    // Validate and sanitize inputs
+    const sanitizedTitle = validateAndSanitize.string(title, 200);
+    const sanitizedDescription = validateAndSanitize.string(description, 2000);
+    const sanitizedDueDate = validateAndSanitize.date(dueDate);
+    const sanitizedClassName = validateAndSanitize.string(className, 100);
+    const sanitizedAssignedTo = validateAndSanitize.objectIdArray(assignedTo);
+    const createdBy = validateAndSanitize.objectId(req.user.userId);
+
     // Validate required fields
-    if (!title || !description || !dueDate || !className) {
+    if (!sanitizedTitle || !sanitizedDescription || !sanitizedDueDate || !sanitizedClassName || !createdBy) {
       return res.status(400).json({
         success: false,
-        message: 'All required fields must be provided'
+        message: 'All required fields must be provided and valid'
       });
     }
 
     // Create assignment
     const assignment = new Assignment({
-      title,
-      description,
-      dueDate: new Date(dueDate),
-      className,
-      createdBy: req.user.userId,
-      assignedTo: assignedTo || [],
+      title: sanitizedTitle,
+      description: sanitizedDescription,
+      dueDate: sanitizedDueDate,
+      className: sanitizedClassName,
+      createdBy: createdBy,
+      assignedTo: sanitizedAssignedTo,
       status: 'published'
     });
 
     await assignment.save();
+
+    // Populate and return
     await assignment.populate('createdBy', 'username');
+    await assignment.populate('assignedTo', 'username email');
 
     res.status(201).json({
       success: true,
       message: 'Assignment created successfully',
-      assignment: {
-        id: assignment._id,
-        title: assignment.title,
-        description: assignment.description,
-        dueDate: assignment.dueDate.toISOString().split('T')[0],
-        className: assignment.className,
-        createdBy: assignment.createdBy.username
-      }
+      assignment
     });
   } catch (error) {
     console.error('Error creating assignment:', error);
@@ -185,17 +211,189 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-// Submit assignment (student only with MongoDB file storage)
+// Submit assignment
 router.post('/:id/submit', auth, async (req, res) => {
   try {
-    const assignmentId = req.params.id;
+    const assignmentId = validateAndSanitize.objectId(req.params.id);
     const { submissionText, fileData, fileName, fileType } = req.body;
-    
-    // Validate that user is a student
+    const userId = validateAndSanitize.objectId(req.user.userId);
+
+    if (!assignmentId || !userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid assignment ID or user ID'
+      });
+    }
+
+    // Validate permissions (students only)
     if (req.user.role !== 'student') {
       return res.status(403).json({
         success: false,
         message: 'Only students can submit assignments'
+      });
+    }
+
+    // Validate and sanitize inputs
+    const sanitizedSubmissionText = validateAndSanitize.string(submissionText, 5000);
+    const sanitizedFileName = validateAndSanitize.string(fileName, 255);
+    const sanitizedFileType = validateAndSanitize.string(fileType, 50);
+
+    // Find assignment
+    const assignment = await Assignment.findById(assignmentId);
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Assignment not found'
+      });
+    }
+
+    // Check if student is assigned to this assignment
+    if (!assignment.assignedTo.includes(userId)) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not assigned to this assignment'
+      });
+    }
+
+    // Check due date
+    if (new Date() > assignment.dueDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Assignment submission deadline has passed'
+      });
+    }
+
+    // Remove any existing submission by this student
+    assignment.submissions = assignment.submissions.filter(
+      sub => sub.student.toString() !== userId
+    );
+
+    // Add new submission
+    const submission = {
+      student: userId,
+      submittedAt: new Date(),
+      status: 'submitted'
+    };
+
+    if (sanitizedSubmissionText) {
+      submission.text = sanitizedSubmissionText;
+    }
+
+    if (fileData && sanitizedFileName && sanitizedFileType) {
+      // Validate file data (in a real implementation, you'd handle file upload properly)
+      submission.fileData = fileData;
+      submission.fileName = sanitizedFileName;
+      submission.fileType = sanitizedFileType;
+    }
+
+    assignment.submissions.push(submission);
+    await assignment.save();
+
+    res.json({
+      success: true,
+      message: 'Assignment submitted successfully',
+      submission
+    });
+  } catch (error) {
+    console.error('Error submitting assignment:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error submitting assignment'
+    });
+  }
+});
+
+// Update assignment (teacher/admin only)
+router.put('/:id', auth, async (req, res) => {
+  try {
+    const assignmentId = validateAndSanitize.objectId(req.params.id);
+    const { title, description, dueDate, className, assignedTo } = req.body;
+    const userId = validateAndSanitize.objectId(req.user.userId);
+
+    if (!assignmentId || !userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid assignment ID or user ID'
+      });
+    }
+
+    // Validate permissions
+    if (!['teacher', 'college_admin'].includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only teachers and admins can update assignments'
+      });
+    }
+
+    // Validate and sanitize inputs
+    const sanitizedTitle = validateAndSanitize.string(title, 200);
+    const sanitizedDescription = validateAndSanitize.string(description, 2000);
+    const sanitizedDueDate = validateAndSanitize.date(dueDate);
+    const sanitizedClassName = validateAndSanitize.string(className, 100);
+    const sanitizedAssignedTo = validateAndSanitize.objectIdArray(assignedTo);
+
+    // Find assignment
+    const assignment = await Assignment.findById(assignmentId);
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Assignment not found'
+      });
+    }
+
+    // Check permissions (teachers can only update their own assignments)
+    if (req.user.role === 'teacher' && assignment.createdBy.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only update your own assignments'
+      });
+    }
+
+    // Update assignment
+    if (sanitizedTitle) assignment.title = sanitizedTitle;
+    if (sanitizedDescription) assignment.description = sanitizedDescription;
+    if (sanitizedDueDate) assignment.dueDate = sanitizedDueDate;
+    if (sanitizedClassName) assignment.className = sanitizedClassName;
+    if (sanitizedAssignedTo) assignment.assignedTo = sanitizedAssignedTo;
+
+    await assignment.save();
+
+    // Populate and return
+    await assignment.populate('createdBy', 'username');
+    await assignment.populate('assignedTo', 'username email');
+
+    res.json({
+      success: true,
+      message: 'Assignment updated successfully',
+      assignment
+    });
+  } catch (error) {
+    console.error('Error updating assignment:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating assignment'
+    });
+  }
+});
+
+// Delete assignment (teacher/admin only)
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const assignmentId = validateAndSanitize.objectId(req.params.id);
+    const userId = validateAndSanitize.objectId(req.user.userId);
+
+    if (!assignmentId || !userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid assignment ID or user ID'
+      });
+    }
+
+    // Validate permissions
+    if (!['teacher', 'college_admin'].includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only teachers and admins can delete assignments'
       });
     }
 
@@ -208,190 +406,15 @@ router.post('/:id/submit', auth, async (req, res) => {
       });
     }
 
-    // Check if assignment is published
-    if (assignment.status !== 'published') {
-      return res.status(400).json({
-        success: false,
-        message: 'Assignment is not available for submission'
-      });
-    }
-
-    // Check if student is assigned to this assignment
-    if (assignment.assignedTo.length > 0 && !assignment.assignedTo.includes(req.user.userId)) {
+    // Check permissions (teachers can only delete their own assignments)
+    if (req.user.role === 'teacher' && assignment.createdBy.toString() !== userId) {
       return res.status(403).json({
         success: false,
-        message: 'You are not assigned to this assignment'
+        message: 'You can only delete your own assignments'
       });
     }
 
-    // Check if already submitted
-    const existingSubmission = assignment.submissions.find(
-      sub => sub.student.toString() === req.user.userId.toString()
-    );
-    
-    if (existingSubmission) {
-      return res.status(400).json({
-        success: false,
-        message: 'Assignment already submitted'
-      });
-    }
-
-    // Prepare submission data
-    const submissionData = {
-      student: req.user.userId,
-      content: submissionText || '',
-      submittedAt: new Date()
-    };
-
-    // Add file if provided (store as binary data in MongoDB)
-    if (fileData && fileName && fileType) {
-      // Convert base64 to buffer and store in MongoDB
-      const fileBuffer = Buffer.from(fileData, 'base64');
-      
-      // Check file size (10MB limit)
-      if (fileBuffer.length > 10 * 1024 * 1024) {
-        return res.status(400).json({
-          success: false,
-          message: 'File size exceeds 10MB limit'
-        });
-      }
-
-      // Validate file type
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain', 'application/zip'];
-      if (!allowedTypes.includes(fileType)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid file type. Only images, PDFs, documents, and ZIP files are allowed.'
-        });
-      }
-
-      submissionData.fileData = fileBuffer;           // Store binary data
-      submissionData.originalFileName = fileName;     // Store original name
-      submissionData.fileType = fileType;             // Store MIME type
-      submissionData.fileSize = fileBuffer.length;    // Store file size
-    }
-
-    // Add submission
-    assignment.submissions.push(submissionData);
-
-    await assignment.save();
-
-    res.json({
-      success: true,
-      message: 'Assignment submitted successfully',
-      submission: {
-        submittedAt: submissionData.submittedAt,
-        hasFile: !!fileData,
-        fileName: fileName || null,
-        fileSize: submissionData.fileSize || null
-      }
-    });
-  } catch (error) {
-    console.error('Error submitting assignment:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error submitting assignment'
-    });
-  }
-});
-
-// Update assignment (teachers and admins only)
-router.put('/:id', auth, async (req, res) => {
-  try {
-    // Check if user has permission to update assignments
-    if (req.user.role === 'student') {
-      return res.status(403).json({
-        success: false,
-        message: 'Students cannot update assignments'
-      });
-    }
-
-    const { title, description, dueDate, className, assignedTo } = req.body;
-    const assignmentId = req.params.id;
-
-    // Check if assignment exists and belongs to user (or admin can edit any)
-    let assignment;
-    if (req.user.role === 'college_admin') {
-      // Admins can edit any assignment
-      assignment = await Assignment.findById(assignmentId);
-    } else {
-      // Teachers can only edit their own assignments
-      assignment = await Assignment.findOne({ 
-        _id: assignmentId,
-        createdBy: req.user.userId
-      });
-    }
-
-    if (!assignment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Assignment not found or you do not have permission to edit it'
-      });
-    }
-
-    // Update assignment
-    assignment.title = title || assignment.title;
-    assignment.description = description || assignment.description;
-    assignment.dueDate = dueDate ? new Date(dueDate) : assignment.dueDate;
-    assignment.className = className || assignment.className;
-    assignment.assignedTo = assignedTo || assignment.assignedTo;
-
-    await assignment.save();
-
-    res.json({
-      success: true,
-      message: 'Assignment updated successfully',
-      assignment: {
-        id: assignment._id,
-        title: assignment.title,
-        description: assignment.description,
-        dueDate: assignment.dueDate.toISOString().split('T')[0],
-        className: assignment.className
-      }
-    });
-  } catch (error) {
-    console.error('Error updating assignment:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error updating assignment'
-    });
-  }
-});
-
-// Delete assignment (teachers and admins only)
-router.delete('/:id', auth, async (req, res) => {
-  try {
-    // Check if user has permission to delete assignments
-    if (req.user.role === 'student') {
-      return res.status(403).json({
-        success: false,
-        message: 'Students cannot delete assignments'
-      });
-    }
-
-    const assignmentId = req.params.id;
-
-    // Check if assignment exists and belongs to user (or admin can delete any)
-    let assignment;
-    if (req.user.role === 'college_admin') {
-      // Admins can delete any assignment
-      assignment = await Assignment.findById(assignmentId);
-    } else {
-      // Teachers can only delete their own assignments
-      assignment = await Assignment.findOne({
-        _id: assignmentId,
-        createdBy: req.user.userId
-      });
-    }
-
-    if (!assignment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Assignment not found or you do not have permission to delete it'
-      });
-    }
-
-    await assignment.deleteOne();
+    await Assignment.findByIdAndDelete(assignmentId);
 
     res.json({
       success: true,
@@ -406,38 +429,54 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
-// Grade submission (teachers and admins only)
+// Grade assignment (teacher/admin only)
 router.post('/:id/grade/:studentId', auth, async (req, res) => {
   try {
-    // Check if user has permission to grade assignments
-    if (req.user.role === 'student') {
+    const assignmentId = validateAndSanitize.objectId(req.params.id);
+    const studentId = validateAndSanitize.objectId(req.params.studentId);
+    const { score, feedback } = req.body;
+    const userId = validateAndSanitize.objectId(req.user.userId);
+
+    if (!assignmentId || !studentId || !userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid IDs provided'
+      });
+    }
+
+    // Validate permissions
+    if (!['teacher', 'college_admin'].includes(req.user.role)) {
       return res.status(403).json({
         success: false,
-        message: 'Students cannot grade assignments'
+        message: 'Only teachers and admins can grade assignments'
       });
     }
 
-    const { score, feedback } = req.body;
-    const assignmentId = req.params.id;
-    const studentId = req.params.studentId;
+    // Validate and sanitize inputs
+    const sanitizedScore = validateAndSanitize.number(score, 0, 100);
+    const sanitizedFeedback = validateAndSanitize.string(feedback, 1000);
 
-    // Check if assignment exists and belongs to user (or admin can grade any)
-    let assignment;
-    if (req.user.role === 'college_admin') {
-      // Admins can grade any assignment
-      assignment = await Assignment.findById(assignmentId);
-    } else {
-      // Teachers can only grade their own assignments
-      assignment = await Assignment.findOne({ 
-        _id: assignmentId,
-        createdBy: req.user.userId
+    if (sanitizedScore === null) {
+      return res.status(400).json({
+        success: false,
+        message: 'Score must be between 0 and 100'
       });
     }
 
+    // Find assignment
+    const assignment = await Assignment.findById(assignmentId);
     if (!assignment) {
       return res.status(404).json({
         success: false,
-        message: 'Assignment not found or you do not have permission to grade it'
+        message: 'Assignment not found'
+      });
+    }
+
+    // Check permissions (teachers can only grade their own assignments)
+    if (req.user.role === 'teacher' && assignment.createdBy.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only grade your own assignments'
       });
     }
 
@@ -449,55 +488,60 @@ router.post('/:id/grade/:studentId', auth, async (req, res) => {
     if (!submission) {
       return res.status(404).json({
         success: false,
-        message: 'Submission not found'
+        message: 'Submission not found for this student'
       });
     }
 
     // Update submission with grade
-    submission.score = score;
-    submission.feedback = feedback;
+    submission.score = sanitizedScore;
+    submission.feedback = sanitizedFeedback;
+    submission.status = 'graded';
     submission.gradedAt = new Date();
-    submission.gradedBy = req.user.userId;
 
     await assignment.save();
 
     res.json({
       success: true,
-      message: 'Submission graded successfully',
-      grade: {
-        score: submission.score,
-        feedback: submission.feedback,
-        gradedAt: submission.gradedAt
-      }
+      message: 'Assignment graded successfully',
+      submission
     });
   } catch (error) {
-    console.error('Error grading submission:', error);
+    console.error('Error grading assignment:', error);
     res.status(500).json({
       success: false,
-      message: 'Error grading submission'
+      message: 'Error grading assignment'
     });
   }
 });
 
-// Update assignment status (admin only)
-router.put('/:id/status', auth, async (req, res) => {
+// Update assignment status (teacher/admin only)
+router.patch('/:id/status', auth, async (req, res) => {
   try {
-    // Only admins can change assignment status
-    if (req.user.role !== 'college_admin') {
-      return res.status(403).json({
+    const assignmentId = validateAndSanitize.objectId(req.params.id);
+    const { status } = req.body;
+    const userId = validateAndSanitize.objectId(req.user.userId);
+
+    if (!assignmentId || !userId) {
+      return res.status(400).json({
         success: false,
-        message: 'Only admins can change assignment status'
+        message: 'Invalid assignment ID or user ID'
       });
     }
 
-    const { status } = req.body;
-    const assignmentId = req.params.id;
+    // Validate permissions
+    if (!['teacher', 'college_admin'].includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only teachers and admins can update assignment status'
+      });
+    }
 
     // Validate status
-    if (!['draft', 'published', 'closed'].includes(status)) {
+    const validStatuses = ['draft', 'published', 'archived'];
+    if (!validStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid status. Must be draft, published, or closed'
+        message: 'Invalid status'
       });
     }
 
@@ -510,18 +554,22 @@ router.put('/:id/status', auth, async (req, res) => {
       });
     }
 
+    // Check permissions (teachers can only update their own assignments)
+    if (req.user.role === 'teacher' && assignment.createdBy.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only update your own assignments'
+      });
+    }
+
     // Update status
     assignment.status = status;
     await assignment.save();
 
     res.json({
       success: true,
-      message: `Assignment status updated to ${status}`,
-      assignment: {
-        id: assignment._id,
-        title: assignment.title,
-        status: assignment.status
-      }
+      message: 'Assignment status updated successfully',
+      assignment
     });
   } catch (error) {
     console.error('Error updating assignment status:', error);
@@ -532,19 +580,90 @@ router.put('/:id/status', auth, async (req, res) => {
   }
 });
 
-// Override/delete submission (admin only)
-router.delete('/:id/submission/:studentId', auth, async (req, res) => {
+// Get assignment details
+router.get('/:id', auth, async (req, res) => {
   try {
-    // Only admins can delete submissions
-    if (req.user.role !== 'college_admin') {
-      return res.status(403).json({
+    const assignmentId = validateAndSanitize.objectId(req.params.id);
+    const userId = validateAndSanitize.objectId(req.user.userId);
+
+    if (!assignmentId || !userId) {
+      return res.status(400).json({
         success: false,
-        message: 'Only admins can delete submissions'
+        message: 'Invalid assignment ID or user ID'
       });
     }
 
-    const assignmentId = req.params.id;
-    const studentId = req.params.studentId;
+    // Find assignment
+    const assignment = await Assignment.findById(assignmentId)
+      .populate('createdBy', 'username')
+      .populate('assignedTo', 'username email');
+
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Assignment not found'
+      });
+    }
+
+    // Check access permissions
+    const userRole = req.user.role;
+    if (userRole === 'student') {
+      // Students can only see assignments assigned to them
+      if (!assignment.assignedTo.some(id => id.toString() === userId)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied'
+        });
+      }
+      // Remove other students' submissions
+      assignment.submissions = assignment.submissions.filter(
+        sub => sub.student.toString() === userId
+      );
+    } else if (userRole === 'teacher') {
+      // Teachers can only see their own assignments
+      if (assignment.createdBy._id.toString() !== userId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied'
+        });
+      }
+    }
+    // Admins can see all assignments
+
+    res.json({
+      success: true,
+      assignment
+    });
+  } catch (error) {
+    console.error('Error fetching assignment details:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching assignment details'
+    });
+  }
+});
+
+// Get student's submission for an assignment
+router.get('/:id/submission/:studentId', auth, async (req, res) => {
+  try {
+    const assignmentId = validateAndSanitize.objectId(req.params.id);
+    const studentId = validateAndSanitize.objectId(req.params.studentId);
+    const userId = validateAndSanitize.objectId(req.user.userId);
+
+    if (!assignmentId || !studentId || !userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid IDs provided'
+      });
+    }
+
+    // Validate permissions
+    if (!['teacher', 'college_admin'].includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only teachers and admins can view submissions'
+      });
+    }
 
     // Find assignment
     const assignment = await Assignment.findById(assignmentId);
@@ -555,146 +674,41 @@ router.delete('/:id/submission/:studentId', auth, async (req, res) => {
       });
     }
 
-    // Find and remove submission
-    const submissionIndex = assignment.submissions.findIndex(
-      sub => sub.student.toString() === studentId
-    );
-
-    if (submissionIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'Submission not found'
-      });
-    }
-
-    // Remove submission
-    assignment.submissions.splice(submissionIndex, 1);
-    await assignment.save();
-
-    res.json({
-      success: true,
-      message: 'Submission deleted successfully'
-    });
-  } catch (error) {
-    console.error('Error deleting submission:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error deleting submission'
-    });
-  }
-});
-
-// Get all assignments with full details (admin only)
-router.get('/admin/all', auth, async (req, res) => {
-  try {
-    // Only admins can access this endpoint
-    if (req.user.role !== 'college_admin') {
+    // Check permissions (teachers can only view submissions for their own assignments)
+    if (req.user.role === 'teacher' && assignment.createdBy.toString() !== userId) {
       return res.status(403).json({
         success: false,
-        message: 'Admin access required'
+        message: 'You can only view submissions for your own assignments'
       });
     }
 
-    // Get all assignments with full population
-    const assignments = await Assignment.find({})
-      .populate('createdBy', 'username email role')
-      .populate('assignedTo', 'username email')
-      .populate('submissions.student', 'username email')
-      .populate('submissions.gradedBy', 'username')
-      .sort({ createdAt: -1 });
-
-    res.json({
-      success: true,
-      assignments: assignments.map(assignment => ({
-        id: assignment._id,
-        title: assignment.title,
-        description: assignment.description,
-        dueDate: assignment.dueDate,
-        className: assignment.className,
-        status: assignment.status,
-        createdBy: {
-          id: assignment.createdBy._id,
-          username: assignment.createdBy.username,
-          email: assignment.createdBy.email,
-          role: assignment.createdBy.role
-        },
-        assignedTo: assignment.assignedTo.map(user => ({
-          id: user._id,
-          username: user.username,
-          email: user.email
-        })),
-        submissions: assignment.submissions.map(sub => ({
-          student: {
-            id: sub.student._id,
-            username: sub.student.username,
-            email: sub.student.email
-          },
-          submittedAt: sub.submittedAt,
-          content: sub.content,
-          fileUrl: sub.fileUrl,
-          originalFileName: sub.originalFileName,
-          score: sub.score,
-          feedback: sub.feedback,
-          gradedAt: sub.gradedAt,
-          gradedBy: sub.gradedBy ? {
-            id: sub.gradedBy._id,
-            username: sub.gradedBy.username
-          } : null
-        })),
-        totalSubmissions: assignment.submissions.length,
-        gradedSubmissions: assignment.submissions.filter(sub => sub.score !== undefined).length,
-        pendingGrading: assignment.submissions.filter(sub => sub.score === undefined).length,
-        createdAt: assignment.createdAt,
-        updatedAt: assignment.updatedAt
-      }))
-    });
-  } catch (error) {
-    console.error('Error fetching admin assignments:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching assignments'
-    });
-  }
-});
-
-// Download assignment file from MongoDB
-router.get('/download/:assignmentId/:studentId', auth, async (req, res) => {
-  try {
-    const { assignmentId, studentId } = req.params;
-
-    // Find assignment
-    const assignment = await Assignment.findById(assignmentId);
-    if (!assignment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Assignment not found'
-      });
-    }
-
-    // Find submission
+    // Find student submission
     const submission = assignment.submissions.find(
       sub => sub.student.toString() === studentId
     );
 
-    if (!submission || !submission.fileData) {
+    if (!submission) {
       return res.status(404).json({
         success: false,
-        message: 'File not found'
+        message: 'Submission not found for this student'
       });
     }
 
-    // Set appropriate headers
-    res.setHeader('Content-Type', submission.fileType || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `attachment; filename="${submission.originalFileName}"`);
-    res.setHeader('Content-Length', submission.fileData.length);
+    // Get student details
+    const student = await User.findById(studentId, 'username email');
 
-    // Send file data from MongoDB
-    res.send(submission.fileData);
+    res.json({
+      success: true,
+      submission: {
+        ...submission.toObject(),
+        student
+      }
+    });
   } catch (error) {
-    console.error('Error downloading file:', error);
+    console.error('Error fetching submission:', error);
     res.status(500).json({
       success: false,
-      message: 'Error downloading file'
+      message: 'Error fetching submission'
     });
   }
 });
