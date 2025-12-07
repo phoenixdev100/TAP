@@ -31,6 +31,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useAuth } from '@/contexts/AuthContext';
+import { motion } from "framer-motion";
 
 interface ScheduleItem {
   _id: string;
@@ -488,11 +489,10 @@ const ClassSchedule: React.FC = () => {
 
           {/* Schedule grid */}
           <div
-            className={`mt-6 sm:mt-8 grid gap-4 sm:gap-6 ${
-              viewMode === 'weekly'
+            className={`mt-6 sm:mt-8 grid gap-4 sm:gap-6 ${viewMode === 'weekly'
                 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
                 : ''
-            }`}
+              }`}
           >
             {(viewMode === 'weekly'
               ? daysOfWeek
@@ -553,88 +553,88 @@ const ClassSchedule: React.FC = () => {
                           </div>
                         )}
                         {daySchedules.map((schedule) => (
-                        <div
-                          key={schedule._id}
-                          className="p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors relative"
-                          style={{
-                            borderLeft: `4px solid ${schedule.color}`,
-                          }}
-                        >
-                          <div className="space-y-3">
-                            <div className="flex justify-between items-start">
-                              <h3 className="font-semibold text-lg">
-                                {schedule.className}
-                              </h3>
-                              {canEditSchedule ? (
-                                <div className="flex gap-1.5 opacity-0 hover:opacity-100 transition-opacity">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 rounded-lg hover:bg-accent/20"
-                                    onClick={() => {
-                                      setSelectedSchedule(schedule);
-                                      const { _id, ...rest } = schedule;
-                                      setFormData(rest);
-                                      setSelectedDate(undefined);
-                                      setIsEditDialogOpen(true);
-                                    }}
-                                  >
-                                    <Edit className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive"
-                                    onClick={() =>
-                                      handleDelete(schedule._id)
-                                    }
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
+                          <div
+                            key={schedule._id}
+                            className="p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors relative"
+                            style={{
+                              borderLeft: `4px solid ${schedule.color}`,
+                            }}
+                          >
+                            <div className="space-y-3">
+                              <div className="flex justify-between items-start">
+                                <h3 className="font-semibold text-lg">
+                                  {schedule.className}
+                                </h3>
+                                {canEditSchedule ? (
+                                  <div className="flex gap-1.5 opacity-0 hover:opacity-100 transition-opacity">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 rounded-lg hover:bg-accent/20"
+                                      onClick={() => {
+                                        setSelectedSchedule(schedule);
+                                        const { _id, ...rest } = schedule;
+                                        setFormData(rest);
+                                        setSelectedDate(undefined);
+                                        setIsEditDialogOpen(true);
+                                      }}
+                                    >
+                                      <Edit className="h-3.5 w-3.5" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive"
+                                      onClick={() =>
+                                        handleDelete(schedule._id)
+                                      }
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <div className="flex gap-1.5 opacity-0 hover:opacity-100 transition-opacity">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 rounded-lg hover:bg-accent/20"
+                                      title="View only - Students cannot edit schedules"
+                                    >
+                                      <Eye className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-sm">
+                                  <div className="flex items-center gap-2 text-muted-foreground">
+                                    <User className="h-3.5 w-3.5" />
+                                    <span className="font-medium">
+                                      Professor:
+                                    </span>
+                                  </div>
+                                  <span>{schedule.professor}</span>
                                 </div>
-                              ) : (
-                                <div className="flex gap-1.5 opacity-0 hover:opacity-100 transition-opacity">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 rounded-lg hover:bg-accent/20"
-                                    title="View only - Students cannot edit schedules"
-                                  >
-                                    <Eye className="h-3.5 w-3.5" />
-                                  </Button>
-                                </div>
-                              )}
-                            </div>
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-2 text-sm">
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                  <User className="h-3.5 w-3.5" />
-                                  <span className="font-medium">
-                                    Professor:
+                                <div className="flex items-center gap-2 text-sm">
+                                  <div className="flex items-center gap-2 text-muted-foreground">
+                                    <Clock className="h-3.5 w-3.5" />
+                                    <span className="font-medium">Time:</span>
+                                  </div>
+                                  <span>
+                                    {schedule.startTime} - {schedule.endTime}
                                   </span>
                                 </div>
-                                <span>{schedule.professor}</span>
-                              </div>
-                              <div className="flex items-center gap-2 text-sm">
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                  <Clock className="h-3.5 w-3.5" />
-                                  <span className="font-medium">Time:</span>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <div className="flex items-center gap-2 text-muted-foreground">
+                                    <MapPin className="h-3.5 w-3.5" />
+                                    <span className="font-medium">Room No:</span>
+                                  </div>
+                                  <span>{schedule.location}</span>
                                 </div>
-                                <span>
-                                  {schedule.startTime} - {schedule.endTime}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2 text-sm">
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                  <MapPin className="h-3.5 w-3.5" />
-                                  <span className="font-medium">Room No:</span>
-                                </div>
-                                <span>{schedule.location}</span>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
                       </>
                     )}
                   </CardContent>

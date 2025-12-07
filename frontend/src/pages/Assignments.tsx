@@ -21,15 +21,15 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/api/axios";
-import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  CalendarClock, 
-  CheckCheck, 
-  Clock, 
-  Upload, 
-  Download, 
+import {
+  Plus,
+  Edit,
+  Trash2,
+  CalendarClock,
+  CheckCheck,
+  Clock,
+  Upload,
+  Download,
   FileText,
   Eye,
   Star,
@@ -37,6 +37,7 @@ import {
   User
 } from 'lucide-react';
 import { format } from "date-fns";
+import { motion } from "framer-motion";
 
 interface Assignment {
   id: string;
@@ -105,14 +106,14 @@ const Assignments = () => {
 
   // Check if user has permission to edit assignments
   const canEditAssignment = user?.role === 'teacher' || user?.role === 'college_admin';
-  
+
   // Check if user has full admin control
   const hasFullControl = user?.role === 'college_admin';
 
   const fetchAssignments = async () => {
     try {
       const response = await api.get<ApiResponse<Assignment>>('/api/assignments');
-      
+
       if (response.data.success && response.data.assignments) {
         setAssignments(response.data.assignments);
       } else {
@@ -142,14 +143,14 @@ const Assignments = () => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const reader = new FileReader();
-      
+
       reader.onload = (event) => {
         if (event.target?.result) {
           const base64String = event.target.result as string;
           // Remove the data URL prefix to get pure base64
           const pureBase64 = base64String.split(',')[1];
-          setSubmissionData(prev => ({ 
-            ...prev, 
+          setSubmissionData(prev => ({
+            ...prev,
             file: file,
             fileData: pureBase64,
             fileName: file.name,
@@ -157,7 +158,7 @@ const Assignments = () => {
           }));
         }
       };
-      
+
       reader.readAsDataURL(file);
     }
   };
@@ -346,11 +347,11 @@ const Assignments = () => {
       const response = await api.get(`/api/assignments/download/${assignmentId}/${studentId}`, {
         responseType: 'blob'
       });
-      
+
       // Create blob from response with proper typing
       const blob = new Blob([response.data as BlobPart]);
       const url = window.URL.createObjectURL(blob);
-      
+
       // Create temporary link and trigger download
       const link = document.createElement('a');
       link.href = url;
@@ -390,9 +391,9 @@ const Assignments = () => {
   const openGradeDialog = (assignment: Assignment, submission: any) => {
     setSelectedAssignment(assignment);
     setSelectedSubmission(submission);
-    setGradeData({ 
-      score: submission.score?.toString() || '', 
-      feedback: submission.feedback || '' 
+    setGradeData({
+      score: submission.score?.toString() || '',
+      feedback: submission.feedback || ''
     });
     setIsGradeDialogOpen(true);
   };
@@ -401,7 +402,7 @@ const Assignments = () => {
     const total = assignments.length;
     const completed = assignments.filter(a => a.status === 'completed').length;
     const pending = assignments.filter(a => a.status === 'pending').length;
-    const overdue = assignments.filter(a => 
+    const overdue = assignments.filter(a =>
       a.status === 'pending' && new Date(a.dueDate) < new Date()
     ).length;
 
@@ -412,23 +413,17 @@ const Assignments = () => {
 
   return (
     <div className="min-h-screen w-full flex flex-col pb-10 sm:pb-0 space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+      >
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
+          <h2 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
             Assignments
-            {user?.role === 'student' && (
-              <span className="ml-2 text-sm text-muted-foreground font-normal block sm:inline">
-                (Student View)
-              </span>
-            )}
-            {hasFullControl && (
-              <span className="ml-2 text-sm text-green-600 font-normal block sm:inline">
-                (Admin Control)
-              </span>
-            )}
           </h2>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            {user?.role === 'student' 
+          <p className="text-muted-foreground mt-2 text-lg">
+            {user?.role === 'student'
               ? 'Track your upcoming deadlines and submit your work'
               : 'Manage assignments and grade student submissions'
             }
@@ -490,62 +485,67 @@ const Assignments = () => {
             </DialogContent>
           </Dialog>
         )}
-      </div>
+      </motion.div>
 
-      {/* Statistics Cards */}
-      <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="bg-blue-100 rounded-t-lg py-3 sm:py-4">
-            <CardTitle className="flex items-center justify-between text-sm sm:text-lg">
-              <span className="text-sm sm:text-base">Total</span>
-              <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
+      {/* Enhanced Statistics Cards */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4"
+      >
+        <Card className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 border-none shadow-lg">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center justify-between text-sm">
+              <span>Total</span>
+              <FileText className="h-5 w-5 text-blue-600" />
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-4 sm:pt-6">
-            <p className="text-2xl sm:text-3xl font-bold text-center">{stats.total}</p>
-            <p className="text-center text-muted-foreground text-xs sm:text-sm">Assignments</p>
+          <CardContent>
+            <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
+            <p className="text-sm text-muted-foreground">Assignments</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="bg-green-100 rounded-t-lg py-3 sm:py-4">
-            <CardTitle className="flex items-center justify-between text-sm sm:text-lg">
-              <span className="text-sm sm:text-base">Completed</span>
-              <CheckCheck className="h-4 w-4 sm:h-5 sm:w-5" />
+        <Card className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 border-none shadow-lg">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center justify-between text-sm">
+              <span>Completed</span>
+              <CheckCheck className="h-5 w-5 text-green-600" />
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-4 sm:pt-6">
-            <p className="text-2xl sm:text-3xl font-bold text-center">{stats.completed}</p>
-            <p className="text-center text-muted-foreground text-xs sm:text-sm">Submitted</p>
+          <CardContent>
+            <p className="text-3xl font-bold text-green-600">{stats.completed}</p>
+            <p className="text-sm text-muted-foreground">Submitted</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="bg-amber-100 rounded-t-lg py-3 sm:py-4">
-            <CardTitle className="flex items-center justify-between text-sm sm:text-lg">
-              <span className="text-sm sm:text-base">Pending</span>
-              <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
+        <Card className="bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 border-none shadow-lg">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center justify-between text-sm">
+              <span>Pending</span>
+              <Clock className="h-5 w-5 text-amber-600" />
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-4 sm:pt-6">
-            <p className="text-2xl sm:text-3xl font-bold text-center">{stats.pending}</p>
-            <p className="text-center text-muted-foreground text-xs sm:text-sm">To Do</p>
+          <CardContent>
+            <p className="text-3xl font-bold text-amber-600">{stats.pending}</p>
+            <p className="text-sm text-muted-foreground">To Do</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="bg-red-100 rounded-t-lg py-3 sm:py-4">
-            <CardTitle className="flex items-center justify-between text-sm sm:text-lg">
-              <span className="text-sm sm:text-base">Overdue</span>
-              <CalendarClock className="h-4 w-4 sm:h-5 sm:w-5" />
+        <Card className="bg-gradient-to-br from-red-50 via-rose-50 to-pink-50 border-none shadow-lg">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center justify-between text-sm">
+              <span>Overdue</span>
+              <CalendarClock className="h-5 w-5 text-red-600" />
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-4 sm:pt-6">
-            <p className="text-2xl sm:text-3xl font-bold text-center">{stats.overdue}</p>
-            <p className="text-center text-muted-foreground text-xs sm:text-sm">Late</p>
+          <CardContent>
+            <p className="text-3xl font-bold text-red-600">{stats.overdue}</p>
+            <p className="text-sm text-muted-foreground">Late</p>
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
 
       {/* Assignments List */}
       <div className="space-y-4">
@@ -553,7 +553,7 @@ const Assignments = () => {
           <Card>
             <CardContent className="pt-6">
               <p className="text-center text-muted-foreground py-8">
-                {user?.role === 'student' 
+                {user?.role === 'student'
                   ? 'No assignments assigned to you yet.'
                   : 'No assignments created yet. Create one to get started.'
                 }
