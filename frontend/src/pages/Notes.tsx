@@ -76,9 +76,8 @@ const NoteCard = ({ note, onLike, onBookmark, onDownload }) => {
               variant="ghost"
               size="sm"
               onClick={() => onLike(note._id)}
-              className={`h-8 w-8 p-0 transition-colors ${
-                note.isLiked ? 'text-red-500 hover:text-red-600' : 'hover:text-red-500'
-              }`}
+              className={`h-8 w-8 p-0 transition-colors ${note.isLiked ? 'text-red-500 hover:text-red-600' : 'hover:text-red-500'
+                }`}
             >
               <ThumbsUp className={`h-4 w-4 ${note.isLiked ? 'fill-current' : ''}`} />
             </Button>
@@ -86,9 +85,8 @@ const NoteCard = ({ note, onLike, onBookmark, onDownload }) => {
               variant="ghost"
               size="sm"
               onClick={() => onBookmark(note._id)}
-              className={`h-8 w-8 p-0 transition-colors ${
-                note.isBookmarked ? 'text-purple-500 hover:text-purple-600' : 'hover:text-purple-500'
-              }`}
+              className={`h-8 w-8 p-0 transition-colors ${note.isBookmarked ? 'text-purple-500 hover:text-purple-600' : 'hover:text-purple-500'
+                }`}
             >
               <Bookmark className={`h-4 w-4 ${note.isBookmarked ? 'fill-current' : ''}`} />
             </Button>
@@ -159,7 +157,7 @@ const EmptyState = ({ type, searchQuery, user, onUpload, onBrowseNotes }) => {
         {config.description}
       </p>
       {config.showUpload && (
-        <Button 
+        <Button
           onClick={onUpload}
           className="bg-gradient-to-r from-[#7C3AED] to-[#A855F7] hover:from-[#6D28D9] hover:to-[#9333EA] text-white shadow-lg transition-all duration-300"
         >
@@ -167,7 +165,7 @@ const EmptyState = ({ type, searchQuery, user, onUpload, onBrowseNotes }) => {
         </Button>
       )}
       {config.onAction && (
-        <Button 
+        <Button
           variant="outline"
           className="border-2 hover:border-[#7C3AED] hover:text-[#7C3AED] transition-colors"
           onClick={config.onAction}
@@ -191,7 +189,7 @@ const TabContent = ({ loading, notes, type, searchQuery, user, onUpload, onLike,
 
   if (notes.length === 0) {
     return (
-      <EmptyState 
+      <EmptyState
         type={type}
         searchQuery={searchQuery}
         user={user}
@@ -204,9 +202,9 @@ const TabContent = ({ loading, notes, type, searchQuery, user, onUpload, onLike,
   return (
     <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
       {notes.map((note) => (
-        <NoteCard 
-          key={note._id} 
-          note={note} 
+        <NoteCard
+          key={note._id}
+          note={note}
           onLike={onLike}
           onBookmark={onBookmark}
           onDownload={onDownload}
@@ -233,7 +231,7 @@ const Notes = () => {
     file: null
   });
   const [uploading, setUploading] = useState(false);
-  
+
   const categories = [
     { id: "all", label: "All Notes", icon: FileText },
     { id: "my", label: "My Uploads", icon: Upload },
@@ -254,7 +252,7 @@ const Notes = () => {
           }
         }
       );
-      
+
       if (response.ok) {
         const data = await response.json();
         setNotes(data.notes || []);
@@ -296,7 +294,7 @@ const Notes = () => {
           'Authorization': `Bearer ${token}`
         }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         toast({
@@ -331,7 +329,7 @@ const Notes = () => {
           'Authorization': `Bearer ${token}`
         }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         toast({
@@ -365,7 +363,7 @@ const Notes = () => {
           'Authorization': `Bearer ${token}`
         }
       });
-      
+
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -376,7 +374,7 @@ const Notes = () => {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-        
+
         toast({
           title: "Download Started",
           description: "Your note download has started.",
@@ -403,7 +401,7 @@ const Notes = () => {
 
   const handleFileUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!uploadForm.file) {
       toast({
         title: "Error",
@@ -412,7 +410,7 @@ const Notes = () => {
       });
       return;
     }
-    
+
     if (!uploadForm.title || !uploadForm.subject || !uploadForm.description) {
       toast({
         title: "Error",
@@ -421,7 +419,7 @@ const Notes = () => {
       });
       return;
     }
-    
+
     try {
       setUploading(true);
       const token = localStorage.getItem('token');
@@ -432,7 +430,7 @@ const Notes = () => {
       formData.append('description', uploadForm.description);
       formData.append('tags', uploadForm.tags);
       formData.append('isPublic', uploadForm.isPublic.toString());
-      
+
       const response = await fetch('http://localhost:5000/api/notes/upload', {
         method: 'POST',
         headers: {
@@ -440,7 +438,7 @@ const Notes = () => {
         },
         body: formData
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         toast({
@@ -503,14 +501,14 @@ const Notes = () => {
             )}
           </h2>
           <p className="text-muted-foreground text-sm sm:text-base">
-            {user?.role === 'student' 
+            {user?.role === 'student'
               ? 'Access and download study materials shared by teachers and peers'
               : 'Upload, manage, and share study materials with students'
             }
           </p>
         </div>
         {user?.role !== 'student' && (
-          <Button 
+          <Button
             onClick={handleUpload}
             className="bg-gradient-to-r from-[#7C3AED] to-[#A855F7] hover:from-[#6D28D9] hover:to-[#9333EA] text-white shadow-lg transition-all duration-300 flex items-center gap-2"
           >
@@ -559,10 +557,10 @@ const Notes = () => {
             );
           })}
         </TabsList>
-        
+
         {/* Tab Contents - Now using reusable component */}
         <TabsContent value="all" className="pt-6">
-          <TabContent 
+          <TabContent
             loading={loading}
             notes={notes}
             type="all"
@@ -575,9 +573,9 @@ const Notes = () => {
             onBrowseNotes={() => setSelectedCategory('all')}
           />
         </TabsContent>
-        
+
         <TabsContent value="my" className="pt-6">
-          <TabContent 
+          <TabContent
             loading={loading}
             notes={notes}
             type="my"
@@ -590,9 +588,9 @@ const Notes = () => {
             onBrowseNotes={() => setSelectedCategory('all')}
           />
         </TabsContent>
-        
+
         <TabsContent value="bookmarked" className="pt-6">
-          <TabContent 
+          <TabContent
             loading={loading}
             notes={notes}
             type="bookmarked"
@@ -605,9 +603,9 @@ const Notes = () => {
             onBrowseNotes={() => setSelectedCategory('all')}
           />
         </TabsContent>
-        
+
         <TabsContent value="popular" className="pt-6">
-          <TabContent 
+          <TabContent
             loading={loading}
             notes={notes}
             type="popular"
@@ -621,7 +619,7 @@ const Notes = () => {
           />
         </TabsContent>
       </Tabs>
-      
+
       {/* Upload Dialog */}
       <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
         <DialogContent className="sm:max-w-[600px] max-w-[95vw] border-0 shadow-2xl bg-gradient-to-b from-background to-background/95 backdrop-blur-xl">
@@ -638,7 +636,7 @@ const Notes = () => {
                   id="title"
                   placeholder="Enter note title"
                   value={uploadForm.title}
-                  onChange={(e) => setUploadForm({...uploadForm, title: e.target.value})}
+                  onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })}
                   required
                   className="border-2 focus:ring-2 focus:ring-purple-500"
                 />
@@ -649,37 +647,37 @@ const Notes = () => {
                   id="subject"
                   placeholder="e.g., Mathematics, Computer Science"
                   value={uploadForm.subject}
-                  onChange={(e) => setUploadForm({...uploadForm, subject: e.target.value})}
+                  onChange={(e) => setUploadForm({ ...uploadForm, subject: e.target.value })}
                   required
                   className="border-2 focus:ring-2 focus:ring-purple-500"
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="description">Description *</Label>
               <Textarea
                 id="description"
                 placeholder="Describe your note content..."
                 value={uploadForm.description}
-                onChange={(e) => setUploadForm({...uploadForm, description: e.target.value})}
+                onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })}
                 required
                 rows={3}
                 className="border-2 focus:ring-2 focus:ring-purple-500 resize-none"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="tags">Tags (comma-separated)</Label>
               <Input
                 id="tags"
                 placeholder="e.g., calculus, mathematics, exam"
                 value={uploadForm.tags}
-                onChange={(e) => setUploadForm({...uploadForm, tags: e.target.value})}
+                onChange={(e) => setUploadForm({ ...uploadForm, tags: e.target.value })}
                 className="border-2 focus:ring-2 focus:ring-purple-500"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="file">File *</Label>
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-400 transition-colors">
@@ -687,7 +685,7 @@ const Notes = () => {
                   type="file"
                   id="file"
                   accept=".pdf,.doc,.docx,.txt"
-                  onChange={(e) => setUploadForm({...uploadForm, file: e.target.files?.[0] || null})}
+                  onChange={(e) => setUploadForm({ ...uploadForm, file: e.target.files?.[0] || null })}
                   className="hidden"
                 />
                 <label htmlFor="file" className="cursor-pointer">
@@ -707,20 +705,20 @@ const Notes = () => {
                 </label>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-2">
               <input
                 type="checkbox"
                 id="isPublic"
                 checked={uploadForm.isPublic}
-                onChange={(e) => setUploadForm({...uploadForm, isPublic: e.target.checked})}
+                onChange={(e) => setUploadForm({ ...uploadForm, isPublic: e.target.checked })}
                 className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
               />
               <Label htmlFor="isPublic" className="text-sm font-medium">
                 Make this note public (visible to all users)
               </Label>
             </div>
-            
+
             <div className="flex justify-end gap-3 pt-4">
               <Button
                 type="button"

@@ -316,23 +316,17 @@ const ClassSchedule: React.FC = () => {
     <div className="min-h-screen w-full flex flex-col pb-10 sm:pb-0">
       <div className="flex-1 container mx-auto py-4 sm:py-6">
         <div className="flex flex-col space-y-6 sm:space-y-8">
-          {/* Header with responsive controls */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          {/* Enhanced Header */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+          >
             <div>
-              <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
+              <h2 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
                 Class Schedule
-                {user?.role === 'student' && (
-                  <span className="ml-2 text-sm text-muted-foreground font-normal block sm:inline">
-                    (View Only)
-                  </span>
-                )}
-                {hasFullControl && (
-                  <span className="ml-2 text-sm text-green-600 font-normal block sm:inline">
-                    (Admin Control)
-                  </span>
-                )}
               </h2>
-              <p className="text-muted-foreground text-sm sm:text-base">
+              <p className="text-muted-foreground mt-2 text-lg">
                 {user?.role === 'student'
                   ? 'View your class schedule and upcoming classes'
                   : 'Manage class schedules and timetables'}
@@ -485,13 +479,13 @@ const ClassSchedule: React.FC = () => {
                 </Dialog>
               )}
             </div>
-          </div>
+          </motion.div>
 
           {/* Schedule grid */}
           <div
             className={`mt-6 sm:mt-8 grid gap-4 sm:gap-6 ${viewMode === 'weekly'
-                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-                : ''
+              ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+              : ''
               }`}
           >
             {(viewMode === 'weekly'
@@ -736,7 +730,7 @@ const ClassSchedule: React.FC = () => {
           )}
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 
