@@ -3,6 +3,7 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const Attendance = require('../models/Attendance');
 const User = require('../models/User');
+const { logger } = require('../utils/logger');
 
 // Get student attendance statistics
 router.get('/stats', auth, async (req, res) => {
@@ -17,7 +18,7 @@ router.get('/stats', auth, async (req, res) => {
       ...stats
     });
   } catch (error) {
-    console.error('Error fetching attendance stats:', error);
+    logger.error('Error fetching attendance stats:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching attendance statistics'
@@ -52,7 +53,7 @@ router.get('/records', auth, async (req, res) => {
       records
     });
   } catch (error) {
-    console.error('Error fetching attendance records:', error);
+    logger.error('Error fetching attendance records:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching attendance records'
@@ -63,7 +64,7 @@ router.get('/records', auth, async (req, res) => {
 // Mark attendance (teacher only)
 router.post('/mark', auth, async (req, res) => {
   try {
-    const { studentId, status, date, className, notes } = req.body;
+    const { studentId, classId, status, date, className, notes } = req.body;
     
     // Validate that user is a teacher or admin
     if (req.user.role !== 'teacher' && req.user.role !== 'college_admin') {
@@ -74,7 +75,7 @@ router.post('/mark', auth, async (req, res) => {
     }
 
     // Validate required fields
-    if (!studentId || !status || !date || !className) {
+    if (!studentId || !classId || !status || !date || !className) {
       return res.status(400).json({
         success: false,
         message: 'All required fields must be provided'
@@ -102,6 +103,7 @@ router.post('/mark', auth, async (req, res) => {
     // Create attendance record
     const attendance = new Attendance({
       student: studentId,
+      classId,
       className,
       date: new Date(date),
       status,
@@ -127,7 +129,7 @@ router.post('/mark', auth, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error marking attendance:', error);
+    logger.error('Error marking attendance:', error);
     
     // Handle duplicate key error (already marked for this date/class)
     if (error.code === 11000) {

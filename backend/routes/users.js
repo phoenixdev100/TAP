@@ -81,17 +81,41 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// Create user
-router.post('/', async (req, res) => {
-    const user = new User({
-        username: req.body.username,
-        email: req.body.email,
-        password: req.body.password
-    });
-
+// Create user (admin only)
+router.post('/', auth, async (req, res) => {
     try {
+        // Only admin can create users
+        if (req.user.role !== 'college_admin') {
+            return res.status(403).json({ message: 'Only admins can create users' });
+        }
+
+        const user = new User({
+            username: req.body.username,
+            email: req.body.email,
+            password: req.body.password,
+            role: req.body.role || 'student',
+            firstName: req.body.firstName || '',
+            lastName: req.body.lastName || '',
+            phone: req.body.phone || '',
+            bio: req.body.bio || '',
+            year: req.body.year || '',
+            major: req.body.major || '',
+            gpa: req.body.gpa || ''
+        });
+
         const newUser = await user.save();
-        res.status(201).json(newUser);
+        res.status(201).json({
+            success: true,
+            message: 'User created successfully',
+            user: {
+                id: newUser._id,
+                username: newUser.username,
+                email: newUser.email,
+                role: newUser.role,
+                firstName: newUser.firstName,
+                lastName: newUser.lastName
+            }
+        });
     } catch (err) {
         res.status(400).json({ message: err.message });
     }

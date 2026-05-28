@@ -4,6 +4,7 @@ const auth = require('../middleware/auth');
 const mongoose = require('mongoose');
 const Assignment = require('../models/Assignment');
 const User = require('../models/User');
+const { logger } = require('../utils/logger');
 
 // Input validation and sanitization helper
 const validateAndSanitize = {
@@ -64,7 +65,7 @@ router.get('/stats', auth, async (req, res) => {
       ...stats
     });
   } catch (error) {
-    console.error('Error fetching assignment stats:', error);
+    logger.error('Error fetching assignment stats:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching assignment statistics'
@@ -143,7 +144,7 @@ router.get('/', auth, async (req, res) => {
       assignments
     });
   } catch (error) {
-    console.error('Error fetching assignments:', error);
+    logger.error('Error fetching assignments:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching assignments'
@@ -154,7 +155,7 @@ router.get('/', auth, async (req, res) => {
 // Create assignment (teacher/admin only)
 router.post('/', auth, async (req, res) => {
   try {
-    const { title, description, dueDate, className, assignedTo } = req.body;
+    const { title, description, dueDate, classId, className, assignedTo } = req.body;
     
     // Validate permissions
     if (!['teacher', 'college_admin'].includes(req.user.role)) {
@@ -168,12 +169,13 @@ router.post('/', auth, async (req, res) => {
     const sanitizedTitle = validateAndSanitize.string(title, 200);
     const sanitizedDescription = validateAndSanitize.string(description, 2000);
     const sanitizedDueDate = validateAndSanitize.date(dueDate);
+    const sanitizedClassId = validateAndSanitize.objectId(classId);
     const sanitizedClassName = validateAndSanitize.string(className, 100);
     const sanitizedAssignedTo = validateAndSanitize.objectIdArray(assignedTo);
     const createdBy = validateAndSanitize.objectId(req.user.userId);
 
     // Validate required fields
-    if (!sanitizedTitle || !sanitizedDescription || !sanitizedDueDate || !sanitizedClassName || !createdBy) {
+    if (!sanitizedTitle || !sanitizedDescription || !sanitizedDueDate || !sanitizedClassId || !sanitizedClassName || !createdBy) {
       return res.status(400).json({
         success: false,
         message: 'All required fields must be provided and valid'
@@ -185,6 +187,7 @@ router.post('/', auth, async (req, res) => {
       title: sanitizedTitle,
       description: sanitizedDescription,
       dueDate: sanitizedDueDate,
+      classId: sanitizedClassId,
       className: sanitizedClassName,
       createdBy: createdBy,
       assignedTo: sanitizedAssignedTo,
@@ -203,7 +206,7 @@ router.post('/', auth, async (req, res) => {
       assignment
     });
   } catch (error) {
-    console.error('Error creating assignment:', error);
+    logger.error('Error creating assignment:', error);
     res.status(500).json({
       success: false,
       message: 'Error creating assignment'
@@ -295,7 +298,7 @@ router.post('/:id/submit', auth, async (req, res) => {
       submission
     });
   } catch (error) {
-    console.error('Error submitting assignment:', error);
+    logger.error('Error submitting assignment:', error);
     res.status(500).json({
       success: false,
       message: 'Error submitting assignment'
@@ -368,7 +371,7 @@ router.put('/:id', auth, async (req, res) => {
       assignment
     });
   } catch (error) {
-    console.error('Error updating assignment:', error);
+    logger.error('Error updating assignment:', error);
     res.status(500).json({
       success: false,
       message: 'Error updating assignment'
@@ -421,7 +424,7 @@ router.delete('/:id', auth, async (req, res) => {
       message: 'Assignment deleted successfully'
     });
   } catch (error) {
-    console.error('Error deleting assignment:', error);
+    logger.error('Error deleting assignment:', error);
     res.status(500).json({
       success: false,
       message: 'Error deleting assignment'
@@ -506,7 +509,7 @@ router.post('/:id/grade/:studentId', auth, async (req, res) => {
       submission
     });
   } catch (error) {
-    console.error('Error grading assignment:', error);
+    logger.error('Error grading assignment:', error);
     res.status(500).json({
       success: false,
       message: 'Error grading assignment'
@@ -572,7 +575,7 @@ router.patch('/:id/status', auth, async (req, res) => {
       assignment
     });
   } catch (error) {
-    console.error('Error updating assignment status:', error);
+    logger.error('Error updating assignment status:', error);
     res.status(500).json({
       success: false,
       message: 'Error updating assignment status'
@@ -635,7 +638,7 @@ router.get('/:id', auth, async (req, res) => {
       assignment
     });
   } catch (error) {
-    console.error('Error fetching assignment details:', error);
+    logger.error('Error fetching assignment details:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching assignment details'
@@ -705,7 +708,7 @@ router.get('/:id/submission/:studentId', auth, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching submission:', error);
+    logger.error('Error fetching submission:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching submission'

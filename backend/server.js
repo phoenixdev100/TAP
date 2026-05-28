@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 require('dotenv').config();
+const { logger } = require('./utils/logger');
 
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
@@ -10,6 +11,7 @@ const scheduleRoutes = require('./routes/schedule');
 const attendanceRoutes = require('./routes/attendance');
 const assignmentRoutes = require('./routes/assignments');
 const notesRoutes = require('./routes/notes');
+const classesRoutes = require('./routes/classes');
 
 const app = express();
 
@@ -27,8 +29,8 @@ const corsOptions = {
     }
 
     if (allowedOrigins.indexOf(origin) === -1) {
-      console.log('Blocked origin:', origin);
-      console.log('Allowed origins:', allowedOrigins);
+      logger.log('Blocked origin:', origin);
+      logger.log('Allowed origins:', allowedOrigins);
       const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
       return callback(new Error(msg), false);
     }
@@ -56,10 +58,10 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/tap', {
     useUnifiedTopology: true
 })
 .then(() => {
-    console.log('Connected to MongoDB successfully');
+    logger.log('Connected to MongoDB successfully');
 })
 .catch((error) => {
-    console.error('MongoDB connection error:', error);
+    logger.error('MongoDB connection error:', error);
 });
 
 // Add CORS headers middleware for Vercel
@@ -94,6 +96,7 @@ app.use('/api/schedule', scheduleRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/assignments', assignmentRoutes);
 app.use('/api/notes', notesRoutes);
+app.use('/api/classes', classesRoutes);
 
 // Root route
 app.get('/', (req, res) => {
@@ -107,7 +110,7 @@ app.get('/', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-    console.error('Global error handler:', err);
+    logger.error('Global error handler:', err);
     res.status(500).json({
         success: false,
         message: 'An unexpected error occurred',
@@ -126,5 +129,5 @@ app.use((req, res) => {
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running on port ${PORT}`);
+    logger.log(`Server is running on port ${PORT}`);
 }); 

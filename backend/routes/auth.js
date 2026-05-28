@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const { logger } = require('../utils/logger');
 
 // Input validation and sanitization helper
 const validateAndSanitize = {
@@ -20,8 +21,9 @@ const validateAndSanitize = {
   
   // Validate username format
   username: (input) => {
-    const usernameRegex = /^[a-zA-Z0-9_]{3,30}$/;
-    const sanitized = validateAndSanitize.string(input, 30);
+    // Allow alphanumeric, spaces, hyphens, and dots for names
+    const usernameRegex = /^[a-zA-Z0-9_\s\-\.]{2,50}$/;
+    const sanitized = validateAndSanitize.string(input, 50);
     return usernameRegex.test(sanitized) ? sanitized : null;
   },
   
@@ -90,13 +92,13 @@ const rateLimit = (attemptsMap, maxAttempts = 5, windowMs = 15 * 60 * 1000) => {
 // Signup route
 router.post('/signup', rateLimit(signupAttempts), async (req, res) => {
     try {
-        console.log('Signup request received:', { 
-            body: { 
-                email: req.body.email, 
-                username: req.body.username, 
+        logger.log('Signup request received:', {
+            body: {
+                email: req.body.email,
+                username: req.body.username,
                 password: '***',
                 role: req.body.role
-            } 
+            }
         });
         
         const { username, email, password, role } = req.body;
@@ -109,7 +111,7 @@ router.post('/signup', rateLimit(signupAttempts), async (req, res) => {
 
         // Check validation results
         if (!sanitizedUsername || !sanitizedEmail || !sanitizedPassword || !sanitizedRole) {
-            console.log('Validation failed:', { 
+            logger.log('Validation failed:', {
                 username: sanitizedUsername ? 'valid' : 'invalid',
                 email: sanitizedEmail ? 'valid' : 'invalid',
                 password: sanitizedPassword ? 'valid' : 'invalid',
@@ -130,7 +132,7 @@ router.post('/signup', rateLimit(signupAttempts), async (req, res) => {
         });
         
         if (existingUser) {
-            console.log('User already exists:', { 
+            logger.log('User already exists:', { 
                 email: sanitizedEmail, 
                 username: sanitizedUsername 
             });
@@ -149,7 +151,7 @@ router.post('/signup', rateLimit(signupAttempts), async (req, res) => {
         });
 
         await user.save();
-        console.log('User created successfully:', { 
+        logger.log('User created successfully:', { 
             userId: user._id,
             role: user.role
         });
@@ -177,7 +179,7 @@ router.post('/signup', rateLimit(signupAttempts), async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error in signup:', error);
+        logger.error('Error in signup:', error);
         res.status(500).json({
             success: false,
             message: 'Error registering user'
@@ -188,7 +190,7 @@ router.post('/signup', rateLimit(signupAttempts), async (req, res) => {
 // Login route
 router.post('/login', rateLimit(loginAttempts), async (req, res) => {
     try {
-        console.log('Login request received:', { 
+        logger.log('Login request received:', { 
             body: { 
                 email: req.body.email, 
                 password: '***'
@@ -202,7 +204,7 @@ router.post('/login', rateLimit(loginAttempts), async (req, res) => {
         const sanitizedPassword = validateAndSanitize.password(password);
 
         if (!sanitizedEmail || !sanitizedPassword) {
-            console.log('Login validation failed:', { 
+            logger.log('Login validation failed:', { 
                 email: sanitizedEmail ? 'valid' : 'invalid',
                 password: sanitizedPassword ? 'valid' : 'invalid'
             });
@@ -215,7 +217,7 @@ router.post('/login', rateLimit(loginAttempts), async (req, res) => {
         // Find user by email
         const user = await User.findOne({ email: sanitizedEmail });
         if (!user) {
-            console.log('User not found:', { email: sanitizedEmail });
+            logger.log('User not found:', { email: sanitizedEmail });
             return res.status(401).json({
                 success: false,
                 message: 'Invalid email or password'
@@ -225,7 +227,7 @@ router.post('/login', rateLimit(loginAttempts), async (req, res) => {
         // Check password
         const isMatch = await user.comparePassword(sanitizedPassword);
         if (!isMatch) {
-            console.log('Password mismatch:', { email: sanitizedEmail });
+            logger.log('Password mismatch:', { email: sanitizedEmail });
             return res.status(401).json({
                 success: false,
                 message: 'Invalid email or password'
@@ -243,7 +245,7 @@ router.post('/login', rateLimit(loginAttempts), async (req, res) => {
             { expiresIn: '24h' }
         );
 
-        console.log('Login successful:', { 
+        logger.log('Login successful:', { 
             userId: user._id, 
             role: user.role 
         });
@@ -260,7 +262,7 @@ router.post('/login', rateLimit(loginAttempts), async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error in login:', error);
+        logger.error('Error in login:', error);
         res.status(500).json({
             success: false,
             message: 'Error during login'
@@ -302,7 +304,7 @@ router.get('/me', async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error in /me endpoint:', error);
+        logger.error('Error in /me endpoint:', error);
         
         if (error.name === 'JsonWebTokenError') {
             return res.status(401).json({
@@ -389,7 +391,7 @@ router.put('/profile', async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error updating profile:', error);
+        logger.error('Error updating profile:', error);
         
         if (error.name === 'JsonWebTokenError') {
             return res.status(401).json({
@@ -460,7 +462,7 @@ router.put('/password', async (req, res) => {
             message: 'Password changed successfully'
         });
     } catch (error) {
-        console.error('Error changing password:', error);
+        logger.error('Error changing password:', error);
         
         if (error.name === 'JsonWebTokenError') {
             return res.status(401).json({

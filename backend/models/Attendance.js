@@ -6,6 +6,11 @@ const attendanceSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  classId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Class',
+    required: false
+  },
   className: {
     type: String,
     required: true
@@ -40,7 +45,7 @@ const attendanceSchema = new mongoose.Schema({
 });
 
 // Create compound index for unique attendance records
-attendanceSchema.index({ student: 1, className: 1, date: 1 }, { unique: true });
+attendanceSchema.index({ student: 1, classId: 1, date: 1 }, { unique: true });
 
 // Update the updatedAt field before saving
 attendanceSchema.pre('save', function(next) {

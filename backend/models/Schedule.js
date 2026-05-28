@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const scheduleSchema = new mongoose.Schema({
+  classId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Class',
+    required: false
+  },
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

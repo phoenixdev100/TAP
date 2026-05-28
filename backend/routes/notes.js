@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const multer = require('multer');
 const { GridFSBucket } = require('mongodb');
 const auth = require('../middleware/auth');
+const { logger } = require('../utils/logger');
 
 // GridFS for file storage
 let bucket;
@@ -33,6 +34,7 @@ const NoteSchema = new mongoose.Schema({
   title: { type: String, required: true },
   subject: { type: String, required: true },
   description: { type: String, required: true },
+  classId: { type: mongoose.Schema.Types.ObjectId, ref: 'Class' },
   author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   authorName: { type: String, required: true },
   uploadDate: { type: Date, default: Date.now },
@@ -117,7 +119,7 @@ router.get('/', auth, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching notes:', error);
+    logger.error('Error fetching notes:', error);
     res.status(500).json({ message: 'Error fetching notes' });
   }
 });
@@ -147,7 +149,7 @@ router.get('/:id', auth, async (req, res) => {
     
     res.json(noteData);
   } catch (error) {
-    console.error('Error fetching note:', error);
+    logger.error('Error fetching note:', error);
     res.status(500).json({ message: 'Error fetching note' });
   }
 });
@@ -213,18 +215,18 @@ router.post('/upload', auth, upload.single('file'), async (req, res) => {
           }
         });
       } catch (error) {
-        console.error('Error saving note:', error);
+        logger.error('Error saving note:', error);
         res.status(500).json({ message: 'Error saving note' });
       }
     });
     
     uploadStream.on('error', (error) => {
-      console.error('GridFS upload error:', error);
+      logger.error('GridFS upload error:', error);
       res.status(500).json({ message: 'Error uploading file' });
     });
     
   } catch (error) {
-    console.error('Upload error:', error);
+    logger.error('Upload error:', error);
     res.status(500).json({ message: 'Error uploading note' });
   }
 });
@@ -252,12 +254,12 @@ router.get('/:id/download', auth, async (req, res) => {
     downloadStream.pipe(res);
     
     downloadStream.on('error', (error) => {
-      console.error('Download error:', error);
+      logger.error('Download error:', error);
       res.status(500).json({ message: 'Error downloading file' });
     });
     
   } catch (error) {
-    console.error('Download error:', error);
+    logger.error('Download error:', error);
     res.status(500).json({ message: 'Error downloading note' });
   }
 });
@@ -286,7 +288,7 @@ router.post('/:id/bookmark', auth, async (req, res) => {
       isBookmarked: !isBookmarked
     });
   } catch (error) {
-    console.error('Bookmark error:', error);
+    logger.error('Bookmark error:', error);
     res.status(500).json({ message: 'Error updating bookmark' });
   }
 });
@@ -315,7 +317,7 @@ router.post('/:id/like', auth, async (req, res) => {
       isLiked: !isLiked
     });
   } catch (error) {
-    console.error('Like error:', error);
+    logger.error('Like error:', error);
     res.status(500).json({ message: 'Error updating like' });
   }
 });
@@ -352,7 +354,7 @@ router.post('/:id/rate', auth, async (req, res) => {
       userRating: rating
     });
   } catch (error) {
-    console.error('Rating error:', error);
+    logger.error('Rating error:', error);
     res.status(500).json({ message: 'Error submitting rating' });
   }
 });
@@ -379,7 +381,7 @@ router.delete('/:id', auth, async (req, res) => {
     
     res.json({ message: 'Note deleted successfully' });
   } catch (error) {
-    console.error('Delete error:', error);
+    logger.error('Delete error:', error);
     res.status(500).json({ message: 'Error deleting note' });
   }
 });

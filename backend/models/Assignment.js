@@ -14,6 +14,11 @@ const assignmentSchema = new mongoose.Schema({
     type: Date,
     required: true
   },
+  classId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Class',
+    required: false
+  },
   className: {
     type: String,
     required: true

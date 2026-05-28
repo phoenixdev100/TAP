@@ -3,6 +3,7 @@ const router = express.Router();
 const Schedule = require('../models/Schedule');
 const auth = require('../middleware/auth');
 const mongoose = require('mongoose');
+const { logger } = require('../utils/logger');
 
 // Input validation and sanitization helper
 const validateAndSanitize = {
@@ -98,7 +99,7 @@ router.get('/', auth, async (req, res) => {
       schedules: sanitizedSchedules
     });
   } catch (error) {
-    console.error('Error fetching schedules:', error);
+    logger.error('Error fetching schedules:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching class schedules'
@@ -117,8 +118,9 @@ router.post('/', auth, async (req, res) => {
       });
     }
 
-    const { className, professor, dayOfWeek, startTime, endTime, location, color } = req.body;
+    const { classId, className, professor, dayOfWeek, startTime, endTime, location, color } = req.body;
     const userId = validateAndSanitize.objectId(req.user.userId);
+    const sanitizedClassId = validateAndSanitize.objectId(classId);
 
     // Validate and sanitize inputs
     const sanitizedClassName = validateAndSanitize.string(className, 100);
@@ -130,7 +132,7 @@ router.post('/', auth, async (req, res) => {
     const sanitizedColor = validateAndSanitize.color(color);
 
     // Validate required fields
-    if (!sanitizedClassName || !sanitizedProfessor || !sanitizedDayOfWeek || 
+    if (!sanitizedClassId || !sanitizedClassName || !sanitizedProfessor || !sanitizedDayOfWeek || 
         !sanitizedStartTime || !sanitizedEndTime || !sanitizedLocation || !userId) {
       return res.status(400).json({
         success: false,
@@ -170,6 +172,7 @@ router.post('/', auth, async (req, res) => {
 
     // Create new schedule
     const schedule = new Schedule({
+      classId: sanitizedClassId,
       className: sanitizedClassName,
       professor: sanitizedProfessor,
       dayOfWeek: sanitizedDayOfWeek,
@@ -189,7 +192,7 @@ router.post('/', auth, async (req, res) => {
       schedule
     });
   } catch (error) {
-    console.error('Error creating schedule:', error);
+    logger.error('Error creating schedule:', error);
     res.status(500).json({
       success: false,
       message: 'Error creating class schedule'
@@ -294,7 +297,7 @@ router.put('/:id', auth, async (req, res) => {
       schedule
     });
   } catch (error) {
-    console.error('Error updating schedule:', error);
+    logger.error('Error updating schedule:', error);
     res.status(500).json({
       success: false,
       message: 'Error updating class schedule'
@@ -347,7 +350,7 @@ router.delete('/:id', auth, async (req, res) => {
       message: 'Class schedule deleted successfully'
     });
   } catch (error) {
-    console.error('Error deleting schedule:', error);
+    logger.error('Error deleting schedule:', error);
     res.status(500).json({
       success: false,
       message: 'Error deleting class schedule'
@@ -414,7 +417,7 @@ router.get('/:id', auth, async (req, res) => {
       schedule: sanitizedSchedule
     });
   } catch (error) {
-    console.error('Error fetching schedule:', error);
+    logger.error('Error fetching schedule:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching schedule'
@@ -476,7 +479,7 @@ router.get('/day/:dayOfWeek', auth, async (req, res) => {
       schedules: sanitizedSchedules
     });
   } catch (error) {
-    console.error('Error fetching schedules by day:', error);
+    logger.error('Error fetching schedules by day:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching schedules by day'
@@ -529,7 +532,7 @@ router.get('/my', auth, async (req, res) => {
       schedules: sanitizedSchedules
     });
   } catch (error) {
-    console.error('Error fetching user schedules:', error);
+    logger.error('Error fetching user schedules:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching user schedules'

@@ -55,6 +55,10 @@ const UserSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
+    enrolledClasses: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Class'
+    }],
     createdAt: {
         type: Date,
         default: Date.now
