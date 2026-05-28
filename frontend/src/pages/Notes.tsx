@@ -254,7 +254,7 @@ const Notes = () => {
   const fetchNotes = async () => {
     try {
       setLoading(true);
-      const response = await api.get<NotesResponse>(`/notes?category=${selectedCategory}&search=${searchQuery}&limit=20`);
+      const response = await api.get<NotesResponse>(`/api/notes?category=${selectedCategory}&search=${searchQuery}&limit=20`);
 
       if (response.data) {
         setNotes(response.data.notes || []);
@@ -288,7 +288,7 @@ const Notes = () => {
 
   const handleBookmark = async (noteId: string) => {
     try {
-      const response = await api.post<MessageResponse>(`/notes/${noteId}/bookmark`);
+      const response = await api.post<MessageResponse>(`/api/notes/${noteId}/bookmark`);
 
       if (response.data) {
         toast({
@@ -315,7 +315,7 @@ const Notes = () => {
 
   const handleLike = async (noteId: string) => {
     try {
-      const response = await api.post<MessageResponse>(`/notes/${noteId}/like`);
+      const response = await api.post<MessageResponse>(`/api/notes/${noteId}/like`);
 
       if (response.data) {
         toast({
@@ -342,7 +342,7 @@ const Notes = () => {
 
   const handleDownload = async (noteId: string, fileName: string) => {
     try {
-      const response = await api.get(`/notes/${noteId}/download`, {
+      const response = await api.get(`/api/notes/${noteId}/download`, {
         responseType: 'blob'
       });
 
@@ -403,7 +403,7 @@ const Notes = () => {
       formData.append('tags', uploadForm.tags);
       formData.append('isPublic', uploadForm.isPublic.toString());
 
-      const response = await api.post('/notes/upload', formData, {
+      const response = await api.post('/api/notes/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
