@@ -11,6 +11,16 @@ import { FileText, Search, Upload, Bookmark, ThumbsUp, Clock, Download, Eye, Sta
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion } from "framer-motion";
+import api from "@/api/axios";
+
+interface NotesResponse {
+  notes: any[];
+  message?: string;
+}
+
+interface MessageResponse {
+  message: string;
+}
 
 // Reusable Note Card Component
 const NoteCard = ({ note, onLike, onBookmark, onDownload }) => {
@@ -244,24 +254,14 @@ const Notes = () => {
   const fetchNotes = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `http://localhost:5000/api/notes?category=${selectedCategory}&search=${searchQuery}&limit=20`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
+      const response = await api.get<NotesResponse>(`/notes?category=${selectedCategory}&search=${searchQuery}&limit=20`);
 
-      if (response.ok) {
-        const data = await response.json();
-        setNotes(data.notes || []);
+      if (response.data) {
+        setNotes(response.data.notes || []);
       } else {
-        const errorData = await response.json();
         toast({
           title: "Error",
-          description: errorData.message || "Failed to fetch notes",
+          description: "Failed to fetch notes",
           variant: "destructive"
         });
       }
@@ -288,26 +288,18 @@ const Notes = () => {
 
   const handleBookmark = async (noteId: string) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/notes/${noteId}/bookmark`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await api.post<MessageResponse>(`/notes/${noteId}/bookmark`);
 
-      if (response.ok) {
-        const data = await response.json();
+      if (response.data) {
         toast({
-          title: data.message,
+          title: response.data.message,
           duration: 2000,
         });
         fetchNotes();
       } else {
-        const errorData = await response.json();
         toast({
           title: "Error",
-          description: errorData.message || "Failed to update bookmark",
+          description: "Failed to update bookmark",
           variant: "destructive"
         });
       }
@@ -323,26 +315,18 @@ const Notes = () => {
 
   const handleLike = async (noteId: string) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/notes/${noteId}/like`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await api.post<MessageResponse>(`/notes/${noteId}/like`);
 
-      if (response.ok) {
-        const data = await response.json();
+      if (response.data) {
         toast({
-          title: data.message,
+          title: response.data.message,
           duration: 2000,
         });
         fetchNotes();
       } else {
-        const errorData = await response.json();
         toast({
           title: "Error",
-          description: errorData.message || "Failed to update like",
+          description: "Failed to update like",
           variant: "destructive"
         });
       }
@@ -358,38 +342,26 @@ const Notes = () => {
 
   const handleDownload = async (noteId: string, fileName: string) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/notes/${noteId}/download`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await api.get(`/notes/${noteId}/download`, {
+        responseType: 'blob'
       });
 
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+      const blob = response.data as Blob;
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
 
-        toast({
-          title: "Download Started",
-          description: "Your note download has started.",
-          duration: 2000,
-        });
-        fetchNotes();
-      } else {
-        const errorData = await response.json();
-        toast({
-          title: "Error",
-          description: errorData.message || "Failed to download note",
-          variant: "destructive"
-        });
-      }
+      toast({
+        title: "Download Started",
+        description: "Your note download has started.",
+        duration: 2000,
+      });
+      fetchNotes();
     } catch (error) {
       console.error('Error downloading note:', error);
       toast({
@@ -423,7 +395,6 @@ const Notes = () => {
 
     try {
       setUploading(true);
-      const token = localStorage.getItem('token');
       const formData = new FormData();
       formData.append('file', uploadForm.file);
       formData.append('title', uploadForm.title);
@@ -432,16 +403,13 @@ const Notes = () => {
       formData.append('tags', uploadForm.tags);
       formData.append('isPublic', uploadForm.isPublic.toString());
 
-      const response = await fetch('http://localhost:5000/api/notes/upload', {
-        method: 'POST',
+      const response = await api.post('/notes/upload', formData, {
         headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
+          'Content-Type': 'multipart/form-data'
+        }
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      if (response.data) {
         toast({
           title: "Success",
           description: "Note uploaded successfully",
@@ -458,10 +426,9 @@ const Notes = () => {
         });
         fetchNotes();
       } else {
-        const errorData = await response.json();
         toast({
           title: "Error",
-          description: errorData.message || "Failed to upload note",
+          description: "Failed to upload note",
           variant: "destructive"
         });
       }
