@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { UserCheck, AlertCircle, CheckCircle2, XCircle, ChevronLeft, Calendar as CalendarIcon, Clock, TrendingUp, Loader2 } from "lucide-react";
+import { UserCheck, AlertCircle, CheckCircle2, XCircle, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, TrendingUp, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import api from "@/api/axios";
 
 interface AttendanceRecord {
@@ -130,6 +137,8 @@ const Attendance = () => {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [subjects, setSubjects] = useState<SubjectData[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<SubjectData | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [dateRange, setDateRange] = useState<'all' | 'week' | 'month'>('all');
 
   useEffect(() => {
     fetchAttendanceData();
@@ -156,9 +165,12 @@ const Attendance = () => {
         const fetchedRecords = recordsResponse.data.records;
         setRecords(fetchedRecords);
 
+        // Filter records based on date range
+        const filteredRecords = filterRecordsByDateRange(fetchedRecords);
+
         // Group records by className
         const subjectMap = new Map<string, AttendanceRecord[]>();
-        fetchedRecords.forEach((record: AttendanceRecord) => {
+        filteredRecords.forEach((record: AttendanceRecord) => {
           if (!subjectMap.has(record.className)) {
             subjectMap.set(record.className, []);
           }
@@ -190,19 +202,69 @@ const Attendance = () => {
     }
   };
 
+  const filterRecordsByDateRange = (records: AttendanceRecord[]) => {
+    if (dateRange === 'all') return records;
+
+    const now = new Date();
+    const startDate = new Date();
+
+    if (dateRange === 'week') {
+      startDate.setDate(now.getDate() - 7);
+    } else if (dateRange === 'month') {
+      startDate.setMonth(now.getMonth() - 1);
+    }
+
+    return records.filter(record => {
+      const recordDate = new Date(record.date);
+      return recordDate >= startDate && recordDate <= now;
+    });
+  };
+
+  useEffect(() => {
+    if (records.length > 0) {
+      const filteredRecords = filterRecordsByDateRange(records);
+
+      // Group records by className
+      const subjectMap = new Map<string, AttendanceRecord[]>();
+      filteredRecords.forEach((record: AttendanceRecord) => {
+        if (!subjectMap.has(record.className)) {
+          subjectMap.set(record.className, []);
+        }
+        subjectMap.get(record.className)!.push(record);
+      });
+
+      // Calculate stats for each subject
+      const subjectsData: SubjectData[] = Array.from(subjectMap.entries()).map(([className, classRecords]) => {
+        const totalClasses = classRecords.length;
+        const attendedClasses = classRecords.filter(r => r.status === 'present').length;
+        const attendancePercentage = totalClasses > 0 ? (attendedClasses / totalClasses) * 100 : 0;
+
+        return {
+          className,
+          records: classRecords.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+          totalClasses,
+          attendedClasses,
+          attendancePercentage
+        };
+      });
+
+      setSubjects(subjectsData);
+    }
+  }, [dateRange, records]);
+
   const getStatusColor = (status: string) => {
     const statusLower = status.toLowerCase();
     switch (statusLower) {
       case 'present':
-        return 'bg-gradient-to-br from-emerald-50 to-green-100 text-green-700 border-green-200';
+        return 'bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-950/50 dark:to-green-900/50 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800';
       case 'absent':
-        return 'bg-gradient-to-br from-red-50 to-rose-100 text-red-700 border-red-200';
+        return 'bg-gradient-to-br from-red-50 to-rose-100 dark:from-red-950/50 dark:to-rose-900/50 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800';
       case 'late':
-        return 'bg-gradient-to-br from-amber-50 to-yellow-100 text-amber-700 border-amber-200';
+        return 'bg-gradient-to-br from-amber-50 to-yellow-100 dark:from-amber-950/50 dark:to-yellow-900/50 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800';
       case 'excused':
-        return 'bg-gradient-to-br from-blue-50 to-indigo-100 text-blue-700 border-blue-200';
+        return 'bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/50 dark:to-indigo-900/50 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800';
       default:
-        return 'bg-gradient-to-br from-gray-50 to-slate-100 text-gray-700 border-gray-200';
+        return 'bg-gradient-to-br from-gray-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-slate-600';
     }
   };
 
@@ -210,15 +272,15 @@ const Attendance = () => {
     const statusLower = status.toLowerCase();
     switch (statusLower) {
       case 'present':
-        return <CheckCircle2 className="h-5 w-5" />;
+        return <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-white" />;
       case 'absent':
-        return <XCircle className="h-5 w-5" />;
+        return <XCircle className="h-5 w-5 text-red-600 dark:text-white" />;
       case 'late':
-        return <Clock className="h-5 w-5" />;
+        return <Clock className="h-5 w-5 text-amber-600 dark:text-white" />;
       case 'excused':
-        return <AlertCircle className="h-5 w-5" />;
+        return <AlertCircle className="h-5 w-5 text-blue-600 dark:text-white" />;
       default:
-        return <AlertCircle className="h-5 w-5" />;
+        return <AlertCircle className="h-5 w-5 text-gray-600 dark:text-white" />;
     }
   };
 
@@ -236,7 +298,7 @@ const Attendance = () => {
         <div className="p-4 rounded-full bg-red-100">
           <AlertCircle className="h-12 w-12 text-red-600" />
         </div>
-        <h3 className="text-xl font-semibold text-gray-900">Failed to Load Attendance</h3>
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Failed to Load Attendance</h3>
         <p className="text-gray-600 text-center max-w-md">{error}</p>
         <Button onClick={fetchAttendanceData} className="mt-4">
           <Loader2 className="mr-2 h-4 w-4" />
@@ -248,19 +310,67 @@ const Attendance = () => {
 
   if (subjects.length === 0) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col items-center justify-center min-h-[400px] space-y-4"
-      >
-        <div className="p-4 rounded-full bg-gradient-to-br from-primary/10 to-purple-100">
-          <UserCheck className="h-12 w-12 text-primary" />
-        </div>
-        <h3 className="text-xl font-semibold text-gray-900">No Attendance Records</h3>
-        <p className="text-gray-600 text-center max-w-md">
-          Your attendance records will appear here once your teachers start marking attendance.
-        </p>
-      </motion.div>
+      <div className="w-full p-4 sm:p-6 md:p-8 lg:px-12 space-y-6">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+        >
+          <div>
+            <h2 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
+              Attendance Overview
+            </h2>
+            <p className="text-muted-foreground dark:text-gray-400 mt-2 text-lg">
+              Track your attendance across all subjects
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            {/* Date Range Filter */}
+            <div className="flex bg-muted dark:bg-slate-800 rounded-lg p-1">
+              <Button
+                variant={dateRange === 'all' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setDateRange('all')}
+                className="px-3 py-1 text-xs sm:text-sm rounded-md"
+              >
+                All Time
+              </Button>
+              <Button
+                variant={dateRange === 'week' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setDateRange('week')}
+                className="px-3 py-1 text-xs sm:text-sm rounded-md"
+              >
+                This Week
+              </Button>
+              <Button
+                variant={dateRange === 'month' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setDateRange('month')}
+                className="px-3 py-1 text-xs sm:text-sm rounded-md"
+              >
+                This Month
+              </Button>
+            </div>
+          </div>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col items-center justify-center min-h-[400px] space-y-4"
+        >
+          <div className="p-4 rounded-full bg-gradient-to-br from-primary/10 to-purple-100">
+            <UserCheck className="h-12 w-12 text-primary" />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">No Attendance Records</h3>
+          <p className="text-gray-600 dark:text-gray-400 text-center max-w-md">
+            {dateRange === 'all' 
+              ? 'Your attendance records will appear here once your teachers start marking attendance.'
+              : `No attendance records found for the selected ${dateRange === 'week' ? 'week' : 'month'}. Try selecting "All Time" to see all records.`
+            }
+          </p>
+        </motion.div>
+      </div>
     );
   }
 
@@ -288,7 +398,7 @@ const Attendance = () => {
             <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
               {selectedSubject.className}
             </h2>
-            <p className="text-muted-foreground mt-2">
+            <p className="text-muted-foreground dark:text-gray-400 mt-2">
               Detailed Attendance Records
             </p>
           </div>
@@ -299,33 +409,33 @@ const Attendance = () => {
           animate={{ opacity: 1, y: 0 }}
           className="grid gap-6 md:grid-cols-3"
         >
-          <Card className="bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 border-none shadow-lg">
+          <Card className="bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 dark:from-emerald-950 dark:to-green-950 border-none shadow-lg">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Classes</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-300">Total Classes</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-gray-900">{selectedSubject.totalClasses}</div>
+              <div className="text-3xl font-bold text-gray-900 dark:text-white">{selectedSubject.totalClasses}</div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 border-none shadow-lg">
+          <Card className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950 dark:to-indigo-950 border-none shadow-lg">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600">Classes Attended</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-300">Classes Attended</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-gray-900">{selectedSubject.attendedClasses}</div>
+              <div className="text-3xl font-bold text-gray-900 dark:text-white">{selectedSubject.attendedClasses}</div>
             </CardContent>
           </Card>
 
           <Card className={`border-none shadow-lg ${selectedSubject.attendancePercentage >= 75
-            ? "bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50"
-            : "bg-gradient-to-br from-red-50 via-rose-50 to-pink-50"
+            ? "bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-green-950 dark:to-emerald-950"
+            : "bg-gradient-to-br from-red-50 via-rose-50 to-pink-50 dark:from-red-950 dark:to-rose-950"
             }`}>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600">Attendance Rate</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-300">Attendance Rate</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className={`text-3xl font-bold ${selectedSubject.attendancePercentage >= 75 ? "text-green-600" : "text-red-600"
+              <div className={`text-3xl font-bold ${selectedSubject.attendancePercentage >= 75 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
                 }`}>
                 {selectedSubject.attendancePercentage.toFixed(1)}%
               </div>
@@ -333,13 +443,13 @@ const Attendance = () => {
           </Card>
         </motion.div>
 
-        <Card className="border-none shadow-xl bg-gradient-to-br from-white via-gray-50 to-slate-50">
+        <Card className="border-none shadow-xl bg-gradient-to-br from-white via-gray-50 to-slate-50 dark:from-slate-800 dark:via-slate-900 dark:to-slate-950">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CalendarIcon className="h-5 w-5 text-primary" />
               Attendance History
             </CardTitle>
-            <CardDescription>Your complete attendance record for this subject</CardDescription>
+            <CardDescription className="dark:text-gray-400">Your complete attendance record for this subject</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -354,11 +464,11 @@ const Attendance = () => {
                     className={`flex items-center justify-between p-4 rounded-xl border-2 ${getStatusColor(record.status)} backdrop-blur-sm transition-all duration-300 hover:shadow-md hover:scale-[1.02]`}
                   >
                     <div className="flex items-center gap-4">
-                      <div className="p-2 rounded-full bg-white/80 shadow-sm">
+                      <div className="p-2 rounded-full bg-white/80 dark:bg-slate-700/80 shadow-sm">
                         {getStatusIcon(record.status)}
                       </div>
                       <div>
-                        <h4 className="font-semibold text-gray-900">
+                        <h4 className="font-semibold text-gray-900 dark:text-white">
                           {new Date(record.date).toLocaleDateString('en-US', {
                             weekday: 'long',
                             year: 'numeric',
@@ -366,17 +476,17 @@ const Attendance = () => {
                             day: 'numeric'
                           })}
                         </h4>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
                           Marked by {record.markedBy}
                         </p>
                         {record.notes && (
-                          <p className="text-xs text-gray-500 mt-1 italic">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">
                             Note: {record.notes}
                           </p>
                         )}
                       </div>
                     </div>
-                    <span className="text-sm font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-white/80">
+                    <span className="text-sm font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-white/80 dark:bg-slate-700/80 text-gray-700 dark:text-gray-200">
                       {record.status}
                     </span>
                   </motion.div>
@@ -390,7 +500,7 @@ const Attendance = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="w-full p-4 sm:p-6 md:p-8 lg:px-12 space-y-6">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -400,22 +510,51 @@ const Attendance = () => {
           <h2 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
             Attendance Overview
           </h2>
-          <p className="text-muted-foreground mt-2 text-lg">
+          <p className="text-muted-foreground dark:text-gray-400 mt-2 text-lg">
             Track your attendance across all subjects
           </p>
         </div>
-        <motion.div
-          whileHover={{ scale: 1.05 }}
-          className={`flex items-center gap-3 px-6 py-3 rounded-full shadow-lg ${isOverallGood
-            ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white"
-            : "bg-gradient-to-r from-red-500 to-rose-600 text-white"
-            }`}
-        >
-          <UserCheck className="h-5 w-5" />
-          <span className="font-bold text-lg">
-            {overallAttendance.toFixed(1)}%
-          </span>
-        </motion.div>
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          {/* Date Range Filter */}
+          <div className="flex bg-muted dark:bg-slate-800 rounded-lg p-1">
+            <Button
+              variant={dateRange === 'all' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setDateRange('all')}
+              className="px-3 py-1 text-xs sm:text-sm rounded-md"
+            >
+              All Time
+            </Button>
+            <Button
+              variant={dateRange === 'week' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setDateRange('week')}
+              className="px-3 py-1 text-xs sm:text-sm rounded-md"
+            >
+              This Week
+            </Button>
+            <Button
+              variant={dateRange === 'month' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setDateRange('month')}
+              className="px-3 py-1 text-xs sm:text-sm rounded-md"
+            >
+              This Month
+            </Button>
+          </div>
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            className={`flex items-center gap-3 px-6 py-3 rounded-full shadow-lg ${isOverallGood
+              ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white"
+              : "bg-gradient-to-r from-red-500 to-rose-600 text-white"
+              }`}
+          >
+            <UserCheck className="h-5 w-5" />
+            <span className="font-bold text-lg">
+              {overallAttendance.toFixed(1)}%
+            </span>
+          </motion.div>
+        </div>
       </motion.div>
 
       {stats && (
@@ -424,51 +563,51 @@ const Attendance = () => {
           animate={{ opacity: 1, y: 0 }}
           className="grid gap-4 md:grid-cols-4"
         >
-          <Card className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 border-none shadow-lg">
+          <Card className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950 dark:to-indigo-950 border-none shadow-lg">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-300 flex items-center gap-2">
                 <TrendingUp className="h-4 w-4" />
                 Total Classes
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-gray-900">{stats.totalClasses}</div>
+              <div className="text-3xl font-bold text-gray-900 dark:text-white">{stats.totalClasses}</div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 border-none shadow-lg">
+          <Card className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-green-950 dark:to-emerald-950 border-none shadow-lg">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-300 flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4" />
                 Present
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-green-600">{stats.presentClasses}</div>
+              <div className="text-3xl font-bold text-green-600 dark:text-green-400">{stats.presentClasses}</div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-red-50 via-rose-50 to-pink-50 border-none shadow-lg">
+          <Card className="bg-gradient-to-br from-red-50 via-rose-50 to-pink-50 dark:from-red-950 dark:to-rose-950 border-none shadow-lg">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-300 flex items-center gap-2">
                 <XCircle className="h-4 w-4" />
                 Absent
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-red-600">{stats.absentClasses}</div>
+              <div className="text-3xl font-bold text-red-600 dark:text-red-400">{stats.absentClasses}</div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 border-none shadow-lg">
+          <Card className="bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 dark:from-amber-950 dark:to-orange-950 border-none shadow-lg">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-300 flex items-center gap-2">
                 <Clock className="h-4 w-4" />
                 Study Hours/Week
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-amber-600">{stats.studyHours.toFixed(1)}</div>
+              <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">{stats.studyHours.toFixed(1)}</div>
             </CardContent>
           </Card>
         </motion.div>
@@ -490,12 +629,12 @@ const Attendance = () => {
               className="cursor-pointer"
             >
               <Card className={`overflow-hidden border-none shadow-xl transition-all duration-300 ${isGood
-                ? "bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 hover:shadow-green-200"
-                : "bg-gradient-to-br from-red-50 via-rose-50 to-pink-50 hover:shadow-red-200"
+                ? "bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-green-950 dark:to-emerald-950 hover:shadow-green-200"
+                : "bg-gradient-to-br from-red-50 via-rose-50 to-pink-50 dark:from-red-950 dark:to-rose-950 hover:shadow-red-200"
                 }`}>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-xl font-bold text-gray-900">{subject.className}</CardTitle>
+                    <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">{subject.className}</CardTitle>
                     <div className={`p-3 rounded-full shadow-md ${isGood ? "bg-green-500 text-white" : "bg-red-500 text-white"
                       }`}>
                       {isGood ? <CheckCircle2 className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
@@ -505,18 +644,18 @@ const Attendance = () => {
                 <CardContent>
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-semibold text-gray-700">Attendance Rate</span>
-                      <span className={`text-2xl font-bold ${isGood ? "text-green-600" : "text-red-600"
+                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Attendance Rate</span>
+                      <span className={`text-2xl font-bold ${isGood ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
                         }`}>
                         {subject.attendancePercentage.toFixed(1)}%
                       </span>
                     </div>
                     <Progress
                       value={subject.attendancePercentage}
-                      className={`h-3 ${isGood ? "bg-green-200" : "bg-red-200"
+                      className={`h-3 ${isGood ? "bg-green-200 dark:bg-green-900" : "bg-red-200 dark:bg-red-900"
                         }`}
                     />
-                    <div className="flex justify-between text-sm font-medium text-gray-600 pt-2">
+                    <div className="flex justify-between text-sm font-medium text-gray-600 dark:text-gray-400 pt-2">
                       <span>Attended: {subject.attendedClasses}</span>
                       <span>Total: {subject.totalClasses}</span>
                     </div>
@@ -533,40 +672,40 @@ const Attendance = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
       >
-        <Card className="bg-gradient-to-br from-primary/5 via-purple-50 to-pink-50 border-none shadow-xl">
+        <Card className="bg-gradient-to-br from-primary/5 via-purple-50 to-pink-50 dark:from-primary/10 dark:via-purple-950/30 dark:to-pink-950/30 border-none shadow-xl">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-2xl">
               <UserCheck className="h-6 w-6 text-primary" />
               Attendance Guidelines
             </CardTitle>
-            <CardDescription className="text-base">Important information about attendance requirements</CardDescription>
+            <CardDescription className="text-base dark:text-gray-400">Important information about attendance requirements</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid md:grid-cols-2 gap-4">
               <motion.div
                 whileHover={{ scale: 1.02 }}
-                className="flex items-start gap-4 p-4 rounded-xl bg-gradient-to-br from-green-50 to-emerald-100 border-2 border-green-200 shadow-md"
+                className="flex items-start gap-4 p-4 rounded-xl bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-950/50 dark:to-emerald-900/50 border-2 border-green-200 dark:border-green-800 shadow-md"
               >
                 <div className="p-3 rounded-full bg-green-500 text-white shadow-lg">
                   <CheckCircle2 className="h-6 w-6" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-lg text-gray-900">Good Standing</h4>
-                  <p className="text-sm text-gray-700 mt-1">
+                  <h4 className="font-bold text-lg text-gray-900 dark:text-white">Good Standing</h4>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
                     Maintain attendance above 75% to be in good academic standing
                   </p>
                 </div>
               </motion.div>
               <motion.div
                 whileHover={{ scale: 1.02 }}
-                className="flex items-start gap-4 p-4 rounded-xl bg-gradient-to-br from-red-50 to-rose-100 border-2 border-red-200 shadow-md"
+                className="flex items-start gap-4 p-4 rounded-xl bg-gradient-to-br from-red-50 to-rose-100 dark:from-red-950/50 dark:to-rose-900/50 border-2 border-red-200 dark:border-red-800 shadow-md"
               >
                 <div className="p-3 rounded-full bg-red-500 text-white shadow-lg">
                   <AlertCircle className="h-6 w-6" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-lg text-gray-900">Warning Zone</h4>
-                  <p className="text-sm text-gray-700 mt-1">
+                  <h4 className="font-bold text-lg text-gray-900 dark:text-white">Warning Zone</h4>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
                     Below 75% attendance may affect your academic standing and eligibility
                   </p>
                 </div>

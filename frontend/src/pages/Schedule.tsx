@@ -293,14 +293,35 @@ const ClassSchedule: React.FC = () => {
   };
 
   const daysOfWeek = [
-    'Sunday',
     'Monday',
     'Tuesday',
     'Wednesday',
     'Thursday',
     'Friday',
     'Saturday',
+    'Sunday',
   ];
+
+  // Define time slots for the table
+  const timeSlots = [
+    '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
+    '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM'
+  ];
+
+  // Helper to get schedule for a specific day and time slot
+  const getScheduleForSlot = (day: string, timeSlot: string) => {
+    const [time] = timeSlot.split(' ');
+    const [hour, minute] = time.split(':');
+    const hourNum = parseInt(hour);
+    const isPM = timeSlot.includes('PM') && hourNum !== 12;
+    const hour24 = isPM ? hourNum + 12 : (hourNum === 12 ? 0 : hourNum);
+    
+    return schedules.find(schedule => {
+      if (schedule.dayOfWeek !== day) return false;
+      const [startHour] = schedule.startTime.split(':').map(Number);
+      return startHour === hour24;
+    });
+  };
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
@@ -314,7 +335,7 @@ const ClassSchedule: React.FC = () => {
 
   return (
     <div className="min-h-screen w-full flex flex-col pb-10 sm:pb-0">
-      <div className="flex-1 container mx-auto py-4 sm:py-6">
+      <div className="flex-1 w-full px-4 sm:px-6 md:px-8 lg:px-12 py-4 sm:py-6">
         <div className="flex flex-col space-y-6 sm:space-y-8">
           {/* Enhanced Header */}
           <motion.div
@@ -481,161 +502,176 @@ const ClassSchedule: React.FC = () => {
             </div>
           </motion.div>
 
-          {/* Schedule grid */}
-          <div
-            className={`mt-6 sm:mt-8 grid gap-4 sm:gap-6 ${viewMode === 'weekly'
-              ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-              : ''
-              }`}
+          {/* Schedule Table */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mt-6 sm:mt-8"
           >
-            {(viewMode === 'weekly'
-              ? daysOfWeek
-              : [getCurrentDayName()]
-            ).map((day) => {
-              const daySchedules = schedules.filter(
-                (schedule) => schedule.dayOfWeek === day
-              );
-
-              return (
-                <Card
-                  key={day}
-                  className="h-full backdrop-blur-sm bg-white/50 dark:bg-gray-800/50 border-2"
-                >
-                  <CardHeader className="flex flex-row items-center justify-between py-3 sm:py-4">
-                    <CardTitle className="text-base sm:text-lg font-bold bg-gradient-to-r from-purple-600 to-blue-500 text-transparent bg-clip-text">
-                      {day}
-                      {viewMode === 'weekly' && (
-                        <span className="text-xs sm:text-sm text-muted-foreground ml-2 block sm:inline">
-                          {formatDate(
-                            currentWeekDates[daysOfWeek.indexOf(day)]
-                          )}
-                        </span>
-                      )}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {daySchedules.length === 0 ? (
-                      <div className="text-center py-4">
-                        {day === 'Sunday' ? (
-                          <div className="space-y-2">
-                            <p className="text-sm text-red-600 font-semibold">🎉 Holiday</p>
-                            <p className="text-xs text-muted-foreground">Sunday is always a holiday</p>
+            <Card className="backdrop-blur-sm bg-white/50 dark:bg-slate-800/50 border-2 dark:border-slate-700 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[800px] border-collapse">
+                  <thead>
+                    <tr className="border-b-2 border-border">
+                      <th className="p-3 text-left font-semibold text-sm bg-muted/50 dark:bg-slate-700/50 border-r border-border">Time</th>
+                      {viewMode === 'daily' ? (
+                        <th className={`p-3 text-center font-semibold text-sm min-w-[120px] border-r border-border bg-primary/10 dark:bg-primary/20`}>
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="text-primary">{getCurrentDayName()}</span>
+                            <span className="text-xs font-medium text-primary">Today</span>
                           </div>
-                        ) : day === 'Saturday' ? (
-                          <div className="space-y-2">
-                            <p className="text-sm text-amber-600 font-semibold">🏖️ Weekend</p>
-                            <p className="text-xs text-muted-foreground">No extra classes scheduled</p>
-                          </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">No classes scheduled</p>
-                        )}
-                      </div>
-                    ) : (
-                      <>
-                        {day === 'Sunday' && (
-                          <div className="mb-3 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                            <p className="text-xs text-red-600 dark:text-red-400 font-medium text-center">
-                              ⚠️ Extra Class on Sunday
-                            </p>
-                          </div>
-                        )}
-                        {day === 'Saturday' && (
-                          <div className="mb-3 p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                            <p className="text-xs text-amber-600 dark:text-amber-400 font-medium text-center">
-                              📚 Saturday Extra Class
-                            </p>
-                          </div>
-                        )}
-                        {daySchedules.map((schedule) => (
-                          <div
-                            key={schedule._id}
-                            className="p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors relative"
-                            style={{
-                              borderLeft: `4px solid ${schedule.color}`,
-                            }}
-                          >
-                            <div className="space-y-3">
-                              <div className="flex justify-between items-start">
-                                <h3 className="font-semibold text-lg">
-                                  {schedule.className}
-                                </h3>
-                                {canEditSchedule ? (
-                                  <div className="flex gap-1.5 opacity-0 hover:opacity-100 transition-opacity">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 rounded-lg hover:bg-accent/20"
-                                      onClick={() => {
-                                        setSelectedSchedule(schedule);
-                                        const { _id, ...rest } = schedule;
-                                        setFormData(rest);
-                                        setSelectedDate(undefined);
-                                        setIsEditDialogOpen(true);
-                                      }}
-                                    >
-                                      <Edit className="h-3.5 w-3.5" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive"
-                                      onClick={() =>
-                                        handleDelete(schedule._id)
-                                      }
-                                    >
-                                      <Trash2 className="h-3.5 w-3.5" />
-                                    </Button>
-                                  </div>
-                                ) : (
-                                  <div className="flex gap-1.5 opacity-0 hover:opacity-100 transition-opacity">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 rounded-lg hover:bg-accent/20"
-                                      title="View only - Students cannot edit schedules"
-                                    >
-                                      <Eye className="h-3.5 w-3.5" />
-                                    </Button>
-                                  </div>
+                        </th>
+                      ) : (
+                        daysOfWeek.map(day => {
+                          const isToday = day === getCurrentDayName();
+                          return (
+                            <th key={day} className={`p-3 text-center font-semibold text-sm min-w-[120px] border-r border-border ${
+                              isToday ? 'bg-primary/10 dark:bg-primary/20' : 'bg-muted/50 dark:bg-slate-700/50'
+                            }`}>
+                              <div className="flex flex-col items-center gap-1">
+                                <span className={isToday ? 'text-primary' : ''}>{day}</span>
+                                {isToday && (
+                                  <span className="text-xs font-medium text-primary">Today</span>
                                 )}
                               </div>
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-2 text-sm">
-                                  <div className="flex items-center gap-2 text-muted-foreground">
-                                    <User className="h-3.5 w-3.5" />
-                                    <span className="font-medium">
-                                      Professor:
-                                    </span>
+                            </th>
+                          );
+                        })
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {timeSlots.map(timeSlot => (
+                      <tr key={timeSlot} className="border-b border-border hover:bg-muted/30 dark:hover:bg-slate-700/30 transition-colors">
+                        <td className="p-3 text-sm font-medium text-muted-foreground whitespace-nowrap border-r border-border">
+                          {timeSlot}
+                        </td>
+                        {viewMode === 'daily' ? (
+                          (() => {
+                            const currentDay = getCurrentDayName();
+                            const schedule = getScheduleForSlot(currentDay, timeSlot);
+                            return (
+                              <td key={`${currentDay}-${timeSlot}`} className="p-2 border-r border-border">
+                                {schedule ? (
+                                  <motion.div
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="p-3 rounded-lg border-2 transition-all duration-300 hover:scale-105 hover:shadow-md cursor-pointer relative group"
+                                    style={{
+                                      borderColor: schedule.color,
+                                      backgroundColor: `${schedule.color}20`,
+                                    }}
+                                  >
+                                    <div className="space-y-1">
+                                      <h4 className="font-semibold text-sm" style={{ color: schedule.color }}>
+                                        {schedule.className}
+                                      </h4>
+                                      <p className="text-xs text-muted-foreground">{schedule.professor}</p>
+                                      <p className="text-xs text-muted-foreground">{schedule.location}</p>
+                                      <p className="text-xs text-muted-foreground">{schedule.startTime} - {schedule.endTime}</p>
+                                    </div>
+                                    {canEditSchedule && (
+                                      <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-6 w-6"
+                                          onClick={() => {
+                                            setSelectedSchedule(schedule);
+                                            const { _id, ...rest } = schedule;
+                                            setFormData(rest);
+                                            setSelectedDate(undefined);
+                                            setIsEditDialogOpen(true);
+                                          }}
+                                        >
+                                          <Edit className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-6 w-6 hover:text-destructive"
+                                          onClick={() => handleDelete(schedule._id)}
+                                        >
+                                          <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </motion.div>
+                                ) : (
+                                  <div className="h-full min-h-[80px] flex items-center justify-center text-muted-foreground/30">
+                                    -
                                   </div>
-                                  <span>{schedule.professor}</span>
-                                </div>
-                                <div className="flex items-center gap-2 text-sm">
-                                  <div className="flex items-center gap-2 text-muted-foreground">
-                                    <Clock className="h-3.5 w-3.5" />
-                                    <span className="font-medium">Time:</span>
+                                )}
+                              </td>
+                            );
+                          })()
+                        ) : (
+                          daysOfWeek.map(day => {
+                            const schedule = getScheduleForSlot(day, timeSlot);
+                            return (
+                              <td key={`${day}-${timeSlot}`} className="p-2 border-r border-border">
+                                {schedule ? (
+                                  <motion.div
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="p-3 rounded-lg border-2 transition-all duration-300 hover:scale-105 hover:shadow-md cursor-pointer relative group"
+                                    style={{
+                                      borderColor: schedule.color,
+                                      backgroundColor: `${schedule.color}20`,
+                                    }}
+                                  >
+                                    <div className="space-y-1">
+                                      <h4 className="font-semibold text-sm" style={{ color: schedule.color }}>
+                                        {schedule.className}
+                                      </h4>
+                                      <p className="text-xs text-muted-foreground">{schedule.professor}</p>
+                                      <p className="text-xs text-muted-foreground">{schedule.location}</p>
+                                      <p className="text-xs text-muted-foreground">{schedule.startTime} - {schedule.endTime}</p>
+                                    </div>
+                                    {canEditSchedule && (
+                                      <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-6 w-6"
+                                          onClick={() => {
+                                            setSelectedSchedule(schedule);
+                                            const { _id, ...rest } = schedule;
+                                            setFormData(rest);
+                                            setSelectedDate(undefined);
+                                            setIsEditDialogOpen(true);
+                                          }}
+                                        >
+                                          <Edit className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-6 w-6 hover:text-destructive"
+                                          onClick={() => handleDelete(schedule._id)}
+                                        >
+                                          <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </motion.div>
+                                ) : (
+                                  <div className="h-full min-h-[80px] flex items-center justify-center text-muted-foreground/30">
+                                    -
                                   </div>
-                                  <span>
-                                    {schedule.startTime} - {schedule.endTime}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2 text-sm">
-                                  <div className="flex items-center gap-2 text-muted-foreground">
-                                    <MapPin className="h-3.5 w-3.5" />
-                                    <span className="font-medium">Room No:</span>
-                                  </div>
-                                  <span>{schedule.location}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                                )}
+                              </td>
+                            );
+                          })
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </motion.div>
 
           {canEditSchedule && (
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
