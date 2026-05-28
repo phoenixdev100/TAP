@@ -101,10 +101,6 @@ const Layout = ({ children }: LayoutProps) => {
                   <User className="mr-2 h-4 w-4" />
                   <span>View Profile</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <BarChart2 className="mr-2 h-4 w-4" />
-                  <span>GPA: 3.5</span>
-                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />

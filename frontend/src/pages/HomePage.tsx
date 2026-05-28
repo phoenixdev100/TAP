@@ -9,12 +9,13 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
-import { BookOpen, CalendarDays, ListTodo, FileText, UserCheck, Sparkles } from "lucide-react";
+import { BookOpen, CalendarDays, ListTodo, FileText, UserCheck, Sparkles, Moon, Sun } from "lucide-react";
 import { motion, Variants } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface AuthResponse {
   success: boolean;
@@ -39,6 +40,7 @@ const HomePage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { login, signup, user, isLoading: authLoading } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   // Redirect logged-in users to their appropriate dashboard
   useEffect(() => {
@@ -142,26 +144,26 @@ const HomePage = () => {
     {
       title: "Class Schedule",
       description: "Manage your classes and lectures",
-      icon: <CalendarDays className="h-12 w-12 text-indigo-400" />,
-      color: "from-indigo-50 to-blue-50"
+      icon: <CalendarDays className="h-12 w-12 text-indigo-400 dark:text-indigo-300" />,
+      color: "from-indigo-50 to-blue-50 dark:from-indigo-950/50 dark:to-blue-950/50"
     },
     {
       title: "Assignments",
       description: "Track deadlines and submissions",
-      icon: <ListTodo className="h-12 w-12 text-amber-400" />,
-      color: "from-amber-50 to-orange-50"
+      icon: <ListTodo className="h-12 w-12 text-amber-400 dark:text-amber-300" />,
+      color: "from-amber-50 to-orange-50 dark:from-amber-950/50 dark:to-orange-950/50"
     },
     {
       title: "Study Notes",
       description: "Organize and share study materials",
-      icon: <FileText className="h-12 w-12 text-emerald-400" />,
-      color: "from-emerald-50 to-teal-50"
+      icon: <FileText className="h-12 w-12 text-emerald-400 dark:text-emerald-300" />,
+      color: "from-emerald-50 to-teal-50 dark:from-emerald-950/50 dark:to-teal-950/50"
     },
     {
       title: "Attendance",
       description: "Track your attendance records",
-      icon: <UserCheck className="h-12 w-12 text-purple-400" />,
-      color: "from-purple-50 to-fuchsia-50"
+      icon: <UserCheck className="h-12 w-12 text-purple-400 dark:text-purple-300" />,
+      color: "from-purple-50 to-fuchsia-50 dark:from-purple-950/50 dark:to-fuchsia-950/50"
     },
   ];
 
@@ -190,7 +192,7 @@ const HomePage = () => {
   // Show loading state while checking authentication
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-blue-50 dark:to-slate-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Checking authentication...</p>
@@ -202,7 +204,7 @@ const HomePage = () => {
   // If user is logged in, they will be redirected by useEffect
   if (user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-blue-50 dark:to-slate-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Redirecting to dashboard...</p>
@@ -212,20 +214,27 @@ const HomePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-blue-50 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-blue-50 dark:to-slate-900 relative overflow-hidden">
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
-        <div className="absolute top-40 left-40 w-80 h-80 bg-indigo-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 dark:bg-purple-900 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-300 dark:bg-blue-900 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
+        <div className="absolute top-40 left-40 w-80 h-80 bg-indigo-300 dark:bg-indigo-900 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
       </div>
 
       <header className="px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4 md:py-6 lg:py-8 relative z-10">
-        <div className="container mx-auto">
+        <div className="container mx-auto flex justify-between items-center">
           <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent flex items-center gap-2">
             <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 lg:h-8 lg:w-8 text-primary" />
             TAP
           </h1>
+          <button
+            onClick={toggleTheme}
+            className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-full hover:bg-primary/20 transition-colors"
+            title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+          >
+            {theme === 'light' ? <Moon className="h-4 w-4 text-primary" /> : <Sun className="h-4 w-4 text-primary" />}
+          </button>
         </div>
       </header>
 
@@ -242,7 +251,7 @@ const HomePage = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold tracking-tight"
+                className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold tracking-tight text-gray-900 dark:text-white"
               >
                 Your Ultimate <span className="text-gradient bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">College Helper</span>
               </motion.h2>
@@ -250,7 +259,7 @@ const HomePage = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="text-sm sm:text-base md:text-lg lg:text-xl text-muted-foreground md:pr-4 lg:pr-6"
+                className="text-sm sm:text-base md:text-lg lg:text-xl text-muted-foreground dark:text-gray-300 md:pr-4 lg:pr-6"
               >
                 Manage your classes, assignments, notes, and attendance all in one place. Boost your academic performance with our all-in-one TAP platform.
               </motion.p>
@@ -269,8 +278,8 @@ const HomePage = () => {
                   className={`p-3 sm:p-4 md:p-5 rounded-lg bg-gradient-to-br ${feature.color} shadow-lg border border-white/20 backdrop-blur-sm hover:shadow-xl transition-all duration-300`}
                 >
                   <div className="mb-2 sm:mb-3 scale-100 sm:scale-105">{feature.icon}</div>
-                  <h3 className="font-semibold text-xs sm:text-sm md:text-base lg:text-lg">{feature.title}</h3>
-                  <p className="text-xs text-muted-foreground line-clamp-2">{feature.description}</p>
+                  <h3 className="font-semibold text-xs sm:text-sm md:text-base lg:text-lg text-gray-900 dark:text-white">{feature.title}</h3>
+                  <p className="text-xs text-muted-foreground dark:text-gray-400 line-clamp-2">{feature.description}</p>
                 </motion.div>
               ))}
             </motion.div>
@@ -282,17 +291,17 @@ const HomePage = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl mx-auto mt-4 sm:mt-0"
           >
-            <Card className="w-full shadow-2xl bg-background/95 backdrop-blur-sm border-white/20 relative overflow-hidden">
+            <Card className="w-full shadow-2xl bg-background/95 dark:bg-slate-800/95 backdrop-blur-sm border-white/20 dark:border-slate-700 relative overflow-hidden">
               <div className="absolute -top-20 -right-20 w-40 h-40 bg-primary/10 rounded-full blur-3xl"></div>
               <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl"></div>
               <CardHeader className="relative">
-                <div className="flex border-b space-x-4">
+                <div className="flex border-b space-x-4 dark:border-slate-700">
                   <button
                     onClick={() => setActiveTab('login')}
                     className={`pb-2 px-2 font-medium text-sm transition-colors ${
                       activeTab === 'login' 
                         ? 'border-b-2 border-primary text-primary' 
-                        : 'text-muted-foreground hover:text-primary'
+                        : 'text-muted-foreground dark:text-gray-400 hover:text-primary'
                     }`}
                   >
                     Login
@@ -302,16 +311,16 @@ const HomePage = () => {
                     className={`pb-2 px-2 font-medium text-sm transition-colors ${
                       activeTab === 'signup' 
                         ? 'border-b-2 border-primary text-primary' 
-                        : 'text-muted-foreground hover:text-primary'
+                        : 'text-muted-foreground dark:text-gray-400 hover:text-primary'
                     }`}
                   >
                     Sign Up
                   </button>
                 </div>
-                <CardTitle className="mt-4 text-xl sm:text-2xl">
+                <CardTitle className="mt-4 text-xl sm:text-2xl text-gray-900 dark:text-white">
                   {activeTab === 'login' ? 'Welcome back!' : 'Create an account'}
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="dark:text-gray-400">
                   {activeTab === 'login' 
                     ? 'Enter your credentials to access your account' 
                     : 'Fill out the form below to get started'}
@@ -326,7 +335,7 @@ const HomePage = () => {
                       transition={{ duration: 0.3 }}
                       className="space-y-2"
                     >
-                      <label htmlFor="name" className="text-sm font-medium">
+                      <label htmlFor="name" className="text-sm font-medium text-gray-900 dark:text-white">
                         Full Name
                       </label>
                       <Input
@@ -334,7 +343,7 @@ const HomePage = () => {
                         placeholder="Enter your name"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className={`bg-background/50 backdrop-blur-sm ${errors.name ? 'border-red-500' : ''}`}
+                        className={`bg-background/50 dark:bg-slate-700/50 backdrop-blur-sm ${errors.name ? 'border-red-500' : ''}`}
                         disabled={isLoading}
                       />
                       {errors.name && (
@@ -348,7 +357,7 @@ const HomePage = () => {
                     transition={{ duration: 0.3, delay: activeTab === 'signup' ? 0.1 : 0 }}
                     className="space-y-2"
                   >
-                    <label htmlFor="email" className="text-sm font-medium">
+                    <label htmlFor="email" className="text-sm font-medium text-gray-900 dark:text-white">
                       Email
                     </label>
                     <Input
@@ -357,7 +366,7 @@ const HomePage = () => {
                       placeholder="Enter your email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className={`bg-background/50 backdrop-blur-sm ${errors.email ? 'border-red-500' : ''}`}
+                      className={`bg-background/50 dark:bg-slate-700/50 backdrop-blur-sm ${errors.email ? 'border-red-500' : ''}`}
                       disabled={isLoading}
                     />
                     {errors.email && (
@@ -370,7 +379,7 @@ const HomePage = () => {
                     transition={{ duration: 0.3, delay: activeTab === 'signup' ? 0.2 : 0.1 }}
                     className="space-y-2"
                   >
-                    <label htmlFor="password" className="text-sm font-medium">
+                    <label htmlFor="password" className="text-sm font-medium text-gray-900 dark:text-white">
                       Password
                     </label>
                     <Input
@@ -379,7 +388,7 @@ const HomePage = () => {
                       placeholder="Enter your password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className={`bg-background/50 backdrop-blur-sm ${errors.password ? 'border-red-500' : ''}`}
+                      className={`bg-background/50 dark:bg-slate-700/50 backdrop-blur-sm ${errors.password ? 'border-red-500' : ''}`}
                       disabled={isLoading}
                     />
                     {errors.password && (
@@ -393,21 +402,21 @@ const HomePage = () => {
                       transition={{ duration: 0.3, delay: 0.3 }}
                       className="space-y-2"
                     >
-                      <label htmlFor="role" className="text-sm font-medium">
+                      <label htmlFor="role" className="text-sm font-medium text-gray-900 dark:text-white">
                         Role
                       </label>
                       <select
                         id="role"
                         value={role}
                         onChange={(e) => setRole(e.target.value as UserRole)}
-                        className="w-full px-3 py-2 bg-background/50 backdrop-blur-sm border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50"
+                        className="w-full px-3 py-2 bg-background/50 dark:bg-slate-700/50 backdrop-blur-sm border border-input dark:border-slate-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 text-gray-900 dark:text-white"
                         disabled={isLoading}
                       >
                         <option value="student">Student</option>
                         <option value="teacher">Teacher</option>
                         <option value="college_admin">College Administrator</option>
                       </select>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground dark:text-gray-400">
                         {role === 'student' && 'View your classes, assignments, and attendance'}
                         {role === 'teacher' && 'Manage classes, assignments, and track student progress'}
                         {role === 'college_admin' && 'Full platform management and administration'}
