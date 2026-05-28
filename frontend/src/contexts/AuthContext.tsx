@@ -26,8 +26,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Role-based permissions
 const rolePermissions = {
-  student: ['read:own', 'read:schedule', 'read:assignments', 'read:notes', 'read:attendance'],
-  teacher: ['read:own', 'read:schedule', 'write:schedule', 'read:assignments', 'write:assignments', 'read:notes', 'write:notes', 'read:attendance', 'write:attendance'],
+  student: ['read:own', 'read:schedule', 'read:assignments', 'read:notes', 'read:attendance', 'read:resources'],
+  teacher: ['read:own', 'read:schedule', 'write:schedule', 'read:assignments', 'write:assignments', 'read:notes', 'write:notes', 'read:attendance', 'write:attendance', 'read:resources'],
   college_admin: ['*'] // All permissions
 };
 
@@ -151,6 +151,7 @@ const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
       'assignments': ['read:assignments', 'write:assignments'],
       'notes': ['read:notes', 'write:notes'],
       'attendance': ['read:attendance', 'write:attendance'],
+      'resources': ['read:resources'],
       'users': ['college_admin'], // Only college admin can manage users
       'settings': ['teacher', 'college_admin']
     };

@@ -10,11 +10,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { FileText, Search, Upload, Bookmark, ThumbsUp, Clock, Download, Eye, Star, Filter, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { motion } from "framer-motion";
 
 // Reusable Note Card Component
 const NoteCard = ({ note, onLike, onBookmark, onDownload }) => {
   return (
-    <Card className="group hover:shadow-lg transition-all duration-300 border-2 hover:border-purple-200 dark:hover:border-purple-800 overflow-hidden">
+    <Card className="group hover:shadow-lg transition-all duration-300 border-2 hover:border-purple-200 dark:hover:border-purple-800 overflow-hidden backdrop-blur-sm bg-white/50 dark:bg-slate-800/50 dark:border-slate-700 rounded-2xl">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex-1">
@@ -22,7 +23,7 @@ const NoteCard = ({ note, onLike, onBookmark, onDownload }) => {
               {note.title}
             </CardTitle>
             <CardDescription className="mt-1 flex items-center gap-2">
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="secondary" className="text-xs rounded-full">
                 {note.subject}
               </Badge>
               <span className="text-xs text-muted-foreground">
@@ -149,11 +150,11 @@ const EmptyState = ({ type, searchQuery, user, onUpload, onBrowseNotes }) => {
 
   return (
     <div className="text-center py-12 sm:py-16">
-      <div className={`mx-auto w-16 h-16 bg-gradient-to-br from-${config.color}-100 to-${config.color}-200 dark:from-${config.color}-900/20 dark:to-${config.color}-800/20 rounded-full flex items-center justify-center mb-4`}>
+      <div className={`mx-auto w-16 h-16 bg-gradient-to-br from-${config.color}-100 to-${config.color}-200 dark:from-${config.color}-900/30 dark:to-${config.color}-800/30 rounded-full flex items-center justify-center mb-4`}>
         <Icon className={`h-8 w-8 text-${config.color}-600 dark:text-${config.color}-400`} />
       </div>
-      <h3 className="text-lg sm:text-xl font-semibold mb-2">{config.title}</h3>
-      <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+      <h3 className="text-lg sm:text-xl font-semibold mb-2 dark:text-white">{config.title}</h3>
+      <p className="text-sm text-muted-foreground dark:text-gray-400 mb-6 max-w-md mx-auto">
         {config.description}
       </p>
       {config.showUpload && (
@@ -490,17 +491,21 @@ const Notes = () => {
   return (
     <div className="min-h-screen w-full flex flex-col pb-10 sm:pb-0 space-y-6">
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+      >
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
             Notes & Study Material
             {user?.role === 'student' && (
-              <span className="ml-2 text-sm text-muted-foreground font-normal block sm:inline">
+              <span className="ml-2 text-sm text-muted-foreground dark:text-gray-400 font-normal block sm:inline">
                 (Student View)
               </span>
             )}
           </h2>
-          <p className="text-muted-foreground text-sm sm:text-base">
+          <p className="text-muted-foreground dark:text-gray-400 text-sm sm:text-base">
             {user?.role === 'student'
               ? 'Access and download study materials shared by teachers and peers'
               : 'Upload, manage, and share study materials with students'
@@ -510,46 +515,49 @@ const Notes = () => {
         {user?.role !== 'student' && (
           <Button
             onClick={handleUpload}
-            className="bg-gradient-to-r from-[#7C3AED] to-[#A855F7] hover:from-[#6D28D9] hover:to-[#9333EA] text-white shadow-lg transition-all duration-300 flex items-center gap-2"
+            className="bg-gradient-to-r from-[#7C3AED] to-[#A855F7] hover:from-[#6D28D9] hover:to-[#9333EA] text-white shadow-lg transition-all duration-300 flex items-center gap-2 rounded-2xl"
           >
             <Plus className="h-4 w-4" />
             <span className="hidden sm:inline">Upload Notes</span>
             <span className="sm:hidden">Upload</span>
           </Button>
         )}
-      </div>
+      </motion.div>
 
       {/* Search and Filter Section */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="flex flex-col sm:flex-row gap-4"
+      >
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search notes, subjects, or materials..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 h-12 border-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            className="pl-10 h-12 border-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-slate-800/50 dark:border-slate-600 rounded-2xl"
           />
         </div>
-        <Button
-          variant="outline"
-          className="h-12 border-2 hover:border-[#7C3AED] hover:text-[#7C3AED] transition-colors flex items-center gap-2"
-        >
-          <Filter className="h-4 w-4" />
-          <span className="hidden sm:inline">Filter</span>
-        </Button>
-      </div>
+      </motion.div>
 
       {/* Category Tabs */}
-      <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto p-1 bg-muted rounded-lg">
-          {categories.map((category) => {
-            const Icon = category.icon;
-            return (
-              <TabsTrigger
-                key={category.id}
-                value={category.id}
-                className="flex items-center gap-2 py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#7C3AED] data-[state=active]:to-[#A855F7] data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200"
-              >
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto p-1 bg-muted dark:bg-slate-800 rounded-2xl">
+            {categories.map((category) => {
+              const Icon = category.icon;
+              return (
+                <TabsTrigger
+                  key={category.id}
+                  value={category.id}
+                  className="flex items-center gap-2 py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#7C3AED] data-[state=active]:to-[#A855F7] data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 rounded-xl"
+                >
                 <Icon className="h-4 w-4" />
                 <span className="hidden sm:inline">{category.label}</span>
                 <span className="sm:hidden">{category.label.split(' ')[0]}</span>
@@ -560,7 +568,12 @@ const Notes = () => {
 
         {/* Tab Contents - Now using reusable component */}
         <TabsContent value="all" className="pt-6">
-          <TabContent
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <TabContent
             loading={loading}
             notes={notes}
             type="all"
@@ -571,11 +584,17 @@ const Notes = () => {
             onBookmark={handleBookmark}
             onDownload={handleDownload}
             onBrowseNotes={() => setSelectedCategory('all')}
-          />
+            />
+          </motion.div>
         </TabsContent>
 
         <TabsContent value="my" className="pt-6">
-          <TabContent
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <TabContent
             loading={loading}
             notes={notes}
             type="my"
@@ -586,11 +605,17 @@ const Notes = () => {
             onBookmark={handleBookmark}
             onDownload={handleDownload}
             onBrowseNotes={() => setSelectedCategory('all')}
-          />
+            />
+          </motion.div>
         </TabsContent>
 
         <TabsContent value="bookmarked" className="pt-6">
-          <TabContent
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <TabContent
             loading={loading}
             notes={notes}
             type="bookmarked"
@@ -601,11 +626,17 @@ const Notes = () => {
             onBookmark={handleBookmark}
             onDownload={handleDownload}
             onBrowseNotes={() => setSelectedCategory('all')}
-          />
+            />
+          </motion.div>
         </TabsContent>
 
         <TabsContent value="popular" className="pt-6">
-          <TabContent
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <TabContent
             loading={loading}
             notes={notes}
             type="popular"
@@ -616,13 +647,15 @@ const Notes = () => {
             onBookmark={handleBookmark}
             onDownload={handleDownload}
             onBrowseNotes={() => setSelectedCategory('all')}
-          />
+            />
+          </motion.div>
         </TabsContent>
       </Tabs>
+      </motion.div>
 
       {/* Upload Dialog */}
       <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-w-[95vw] border-0 shadow-2xl bg-gradient-to-b from-background to-background/95 backdrop-blur-xl">
+        <DialogContent className="sm:max-w-[600px] max-w-[95vw] border-0 shadow-2xl bg-gradient-to-b from-background to-background/95 backdrop-blur-xl rounded-3xl">
           <DialogHeader className="pb-4">
             <DialogTitle className="text-lg sm:text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
               Upload New Note
@@ -638,7 +671,7 @@ const Notes = () => {
                   value={uploadForm.title}
                   onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })}
                   required
-                  className="border-2 focus:ring-2 focus:ring-purple-500"
+                  className="border-2 focus:ring-2 focus:ring-purple-500 rounded-2xl"
                 />
               </div>
               <div className="space-y-2">
@@ -649,7 +682,7 @@ const Notes = () => {
                   value={uploadForm.subject}
                   onChange={(e) => setUploadForm({ ...uploadForm, subject: e.target.value })}
                   required
-                  className="border-2 focus:ring-2 focus:ring-purple-500"
+                  className="border-2 focus:ring-2 focus:ring-purple-500 rounded-2xl"
                 />
               </div>
             </div>
@@ -663,7 +696,7 @@ const Notes = () => {
                 onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })}
                 required
                 rows={3}
-                className="border-2 focus:ring-2 focus:ring-purple-500 resize-none"
+                className="border-2 focus:ring-2 focus:ring-purple-500 resize-none rounded-2xl"
               />
             </div>
 
@@ -674,13 +707,13 @@ const Notes = () => {
                 placeholder="e.g., calculus, mathematics, exam"
                 value={uploadForm.tags}
                 onChange={(e) => setUploadForm({ ...uploadForm, tags: e.target.value })}
-                className="border-2 focus:ring-2 focus:ring-purple-500"
+                className="border-2 focus:ring-2 focus:ring-purple-500 rounded-2xl"
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="file">File *</Label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-400 transition-colors">
+              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl p-6 text-center hover:border-purple-400 dark:hover:border-purple-600 transition-colors">
                 <input
                   type="file"
                   id="file"
@@ -724,14 +757,14 @@ const Notes = () => {
                 type="button"
                 variant="outline"
                 onClick={() => setUploadDialogOpen(false)}
-                className="border-2 hover:border-[#7C3AED] hover:text-[#7C3AED] transition-colors"
+                className="border-2 hover:border-[#7C3AED] hover:text-[#7C3AED] transition-colors rounded-2xl"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={uploading}
-                className="bg-gradient-to-r from-[#7C3AED] to-[#A855F7] hover:from-[#6D28D9] hover:to-[#9333EA] text-white shadow-lg transition-all duration-300"
+                className="bg-gradient-to-r from-[#7C3AED] to-[#A855F7] hover:from-[#6D28D9] hover:to-[#9333EA] text-white shadow-lg transition-all duration-300 rounded-2xl"
               >
                 {uploading ? (
                   <>

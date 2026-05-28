@@ -26,6 +26,35 @@ const UserSchema = new mongoose.Schema({
         enum: ['student', 'teacher', 'college_admin'],
         default: 'student'
     },
+    // Profile fields
+    firstName: {
+        type: String,
+        default: ''
+    },
+    lastName: {
+        type: String,
+        default: ''
+    },
+    phone: {
+        type: String,
+        default: ''
+    },
+    bio: {
+        type: String,
+        default: ''
+    },
+    year: {
+        type: String,
+        default: ''
+    },
+    major: {
+        type: String,
+        default: ''
+    },
+    gpa: {
+        type: String,
+        default: ''
+    },
     createdAt: {
         type: Date,
         default: Date.now
