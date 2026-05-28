@@ -494,65 +494,70 @@ const Assignments = () => {
         transition={{ delay: 0.1 }}
         className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4"
       >
-        <Card className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 border-none shadow-lg">
+        <Card className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950 dark:to-indigo-950 border-none shadow-lg">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center justify-between text-sm">
-              <span>Total</span>
-              <FileText className="h-5 w-5 text-blue-600" />
+              <span className="dark:text-white">Total</span>
+              <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
-            <p className="text-sm text-muted-foreground">Assignments</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
+            <p className="text-sm text-muted-foreground dark:text-gray-400">Assignments</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 border-none shadow-lg">
+        <Card className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-green-950 dark:to-emerald-950 border-none shadow-lg">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center justify-between text-sm">
-              <span>Completed</span>
-              <CheckCheck className="h-5 w-5 text-green-600" />
+              <span className="dark:text-white">Completed</span>
+              <CheckCheck className="h-5 w-5 text-green-600 dark:text-green-400" />
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-green-600">{stats.completed}</p>
-            <p className="text-sm text-muted-foreground">Submitted</p>
+            <p className="text-3xl font-bold text-green-600 dark:text-green-400">{stats.completed}</p>
+            <p className="text-sm text-muted-foreground dark:text-gray-400">Submitted</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 border-none shadow-lg">
+        <Card className="bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 dark:from-amber-950 dark:to-orange-950 border-none shadow-lg">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center justify-between text-sm">
-              <span>Pending</span>
-              <Clock className="h-5 w-5 text-amber-600" />
+              <span className="dark:text-white">Pending</span>
+              <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-amber-600">{stats.pending}</p>
-            <p className="text-sm text-muted-foreground">To Do</p>
+            <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">{stats.pending}</p>
+            <p className="text-sm text-muted-foreground dark:text-gray-400">To Do</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-red-50 via-rose-50 to-pink-50 border-none shadow-lg">
+        <Card className="bg-gradient-to-br from-red-50 via-rose-50 to-pink-50 dark:from-red-950 dark:to-rose-950 border-none shadow-lg">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center justify-between text-sm">
-              <span>Overdue</span>
-              <CalendarClock className="h-5 w-5 text-red-600" />
+              <span className="dark:text-white">Overdue</span>
+              <CalendarClock className="h-5 w-5 text-red-600 dark:text-red-400" />
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-red-600">{stats.overdue}</p>
-            <p className="text-sm text-muted-foreground">Late</p>
+            <p className="text-3xl font-bold text-red-600 dark:text-red-400">{stats.overdue}</p>
+            <p className="text-sm text-muted-foreground dark:text-gray-400">Late</p>
           </CardContent>
         </Card>
       </motion.div>
 
       {/* Assignments List */}
-      <div className="space-y-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="space-y-4"
+      >
         {assignments.length === 0 ? (
-          <Card>
+          <Card className="backdrop-blur-sm bg-white/50 dark:bg-slate-800/50 border-2 dark:border-slate-700">
             <CardContent className="pt-6">
-              <p className="text-center text-muted-foreground py-8">
+              <p className="text-center text-muted-foreground dark:text-gray-400 py-8">
                 {user?.role === 'student'
                   ? 'No assignments assigned to you yet.'
                   : 'No assignments created yet. Create one to get started.'
@@ -561,12 +566,30 @@ const Assignments = () => {
             </CardContent>
           </Card>
         ) : (
-          assignments.map((assignment) => (
-            <Card key={assignment.id} className="hover:shadow-lg transition-shadow">
+          assignments.map((assignment, index) => (
+            <motion.div
+              key={assignment.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+            >
+              <Card className="hover:shadow-lg transition-all duration-300 hover:scale-[1.01] backdrop-blur-sm bg-white/50 dark:bg-slate-800/50 border-2 dark:border-slate-700">
               <CardHeader className="pb-3 sm:pb-4">
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
                   <div className="space-y-2 flex-1">
-                    <CardTitle className="text-lg sm:text-xl">{assignment.title}</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-lg sm:text-xl">{assignment.title}</CardTitle>
+                      {assignment.status === 'completed' && (
+                        <span className="px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">
+                          Submitted
+                        </span>
+                      )}
+                      {assignment.status === 'pending' && new Date(assignment.dueDate) < new Date() && (
+                        <span className="px-2 py-0.5 text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full">
+                          Overdue
+                        </span>
+                      )}
+                    </div>
                     <CardDescription className="text-sm sm:text-base">{assignment.description}</CardDescription>
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
                       <span className="font-medium">{assignment.className}</span>
@@ -626,11 +649,17 @@ const Assignments = () => {
                 </div>
               </CardHeader>
               {user?.role !== 'student' && assignment.submissions && assignment.submissions.length > 0 && (
-                <CardContent className="border-t">
+                <CardContent className="border-t dark:border-slate-600">
                   <h4 className="font-semibold mb-3">Submissions ({assignment.submissions.length})</h4>
                   <div className="space-y-2">
                     {assignment.submissions.map((submission, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="flex items-center justify-between p-3 bg-muted/50 dark:bg-slate-700/50 rounded-lg hover:bg-muted dark:hover:bg-slate-700 transition-colors"
+                      >
                         <div className="flex items-center gap-3">
                           <User className="h-4 w-4 text-muted-foreground" />
                           <span className="font-medium">{submission.student}</span>
@@ -676,15 +705,16 @@ const Assignments = () => {
                             </Button>
                           )}
                         </div>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                 </CardContent>
               )}
-            </Card>
+              </Card>
+            </motion.div>
           ))
         )}
-      </div>
+      </motion.div>
 
       {/* Edit Assignment Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

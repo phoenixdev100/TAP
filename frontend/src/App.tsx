@@ -3,11 +3,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./components/Layout";
-import Dashboard from "./pages/Dashboard";
 import Schedule from "./pages/Schedule";
 import Assignments from "./pages/Assignments";
 import Notes from "./pages/Notes";
-import Resources from "./pages/Resources";
 import Attendance from "./pages/Attendance";
 import HomePage from "./pages/HomePage";
 import NotFound from "./pages/NotFound";
@@ -16,6 +14,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import GPACalculator from "./pages/GPACalculator";
 import Profile from "./pages/Profile";
 import AuthProvider from "./contexts/AuthContext";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import StudentDashboard from "./pages/StudentDashboard";
 import TeacherDashboard from "./pages/TeacherDashboard";
@@ -34,8 +33,9 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <Router>
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
         <TooltipProvider>
           <Routes>
             {/* Public Routes */}
@@ -114,16 +114,6 @@ const App = () => (
               }
             />
             <Route
-              path="/resources"
-              element={
-                <ProtectedRoute resource="resources">
-                  <Layout>
-                    <Resources />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/gpa-calculator"
               element={
                 <ProtectedRoute resource="gpa-calculator">
@@ -155,6 +145,7 @@ const App = () => (
         </TooltipProvider>
       </Router>
     </AuthProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

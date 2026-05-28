@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate, useLocation } from "react-router-dom";
-import { BookOpen, CalendarDays, FileText, ListTodo, UserCheck, LogOut, User, Settings, Bell, BookOpenCheck, Sparkles, BarChart2 } from "lucide-react";
+import { BookOpen, CalendarDays, FileText, ListTodo, UserCheck, LogOut, User, Settings, Bell, BookOpenCheck, Sparkles, BarChart2, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -26,6 +27,7 @@ const Layout = ({ children }: LayoutProps) => {
   const currentPath = location.pathname;
   const { toast } = useToast();
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   // Get dashboard route based on user role
@@ -48,7 +50,7 @@ const Layout = ({ children }: LayoutProps) => {
     { value: "/schedule", label: "Schedule", icon: <CalendarDays className="h-4 w-4" /> },
     { value: "/assignments", label: "Assignments", icon: <ListTodo className="h-4 w-4" /> },
     { value: "/notes", label: "Notes", icon: <FileText className="h-4 w-4" /> },
-    { value: "/resources", label: "Resources", icon: <BookOpenCheck className="h-4 w-4" /> },
+    { value: "/attendance", label: "Attendance", icon: <UserCheck className="h-4 w-4" /> },
   ];
 
   const handleLogout = () => {
@@ -57,9 +59,9 @@ const Layout = ({ children }: LayoutProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-blue-50 dark:to-slate-900">
       <header className="py-4 md:py-6">
-        <div className="container mx-auto px-6 md:px-10 flex justify-between items-center">
+        <div className="w-full px-4 sm:px-6 md:px-8 lg:px-12 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate(getDashboardRoute())}
@@ -72,6 +74,13 @@ const Layout = ({ children }: LayoutProps) => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={toggleTheme}
+              className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-full hover:bg-primary/20 transition-colors"
+              title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+            >
+              {theme === 'light' ? <Moon className="h-4 w-4 text-primary" /> : <Sun className="h-4 w-4 text-primary" />}
+            </button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-full hover:bg-primary/20 transition-colors">
@@ -92,10 +101,6 @@ const Layout = ({ children }: LayoutProps) => {
                   <User className="mr-2 h-4 w-4" />
                   <span>View Profile</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <BarChart2 className="mr-2 h-4 w-4" />
-                  <span>GPA: 3.5</span>
-                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
@@ -107,7 +112,7 @@ const Layout = ({ children }: LayoutProps) => {
         </div>
       </header>
 
-      <main className="container mx-auto px-6 py-8 md:px-10 md:py-12">
+      <main className="w-full px-4 sm:px-6 md:px-8 lg:px-12 py-6 md:py-8 lg:py-12">
         {children}
       </main>
 

@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarDays, BookOpen, ListTodo, FileText, UserCheck, Bell, BarChart2, LogOut, User, Sparkles } from "lucide-react";
+import { CalendarDays, BookOpen, ListTodo, FileText, UserCheck, Bell, BarChart2, LogOut, User, Sparkles, Moon, Sun } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import api from '@/api/axios';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend } from "recharts";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,28 +25,28 @@ const features = [
     description: "View your class timetable",
     icon: <CalendarDays className="h-8 w-8 text-blue-500" />,
     path: "/schedule",
-    color: "from-blue-50 to-indigo-50"
+    color: "from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950"
   },
   {
     title: "Assignments",
     description: "View assignments and deadlines",
     icon: <ListTodo className="h-8 w-8 text-amber-500" />,
     path: "/assignments",
-    color: "from-amber-50 to-yellow-50"
+    color: "from-amber-50 to-yellow-50 dark:from-amber-950 dark:to-yellow-950"
   },
   {
     title: "Study Notes",
     description: "Access study materials",
     icon: <FileText className="h-8 w-8 text-emerald-500" />,
     path: "/notes",
-    color: "from-emerald-50 to-teal-50"
+    color: "from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950"
   },
   {
     title: "Attendance",
     description: "View your attendance records",
     icon: <UserCheck className="h-8 w-8 text-purple-500" />,
     path: "/attendance",
-    color: "from-purple-50 to-fuchsia-50"
+    color: "from-purple-50 to-fuchsia-50 dark:from-purple-950 dark:to-fuchsia-950"
   }
 ];
 
@@ -66,6 +69,7 @@ const StudentDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
@@ -76,6 +80,41 @@ const StudentDashboard = () => {
     gpa: 0,
     currentSemester: 'Spring 2024'
   });
+
+  // Chart data
+  const gradeTrendData = [
+    { month: 'Jan', grade: 7.5 },
+    { month: 'Feb', grade: 8.0 },
+    { month: 'Mar', grade: 8.2 },
+    { month: 'Apr', grade: 8.5 },
+    { month: 'May', grade: 8.8 },
+    { month: 'Jun', grade: 9.0 },
+  ];
+
+  const subjectBreakdownData = [
+    { name: 'Mathematics', value: 30, color: '#8884d8' },
+    { name: 'Physics', value: 25, color: '#82ca9d' },
+    { name: 'Chemistry', value: 20, color: '#ffc658' },
+    { name: 'English', value: 15, color: '#ff7300' },
+    { name: 'Computer Science', value: 10, color: '#0088fe' },
+  ];
+
+  const weeklyActivityData = [
+    { day: 'Mon', hours: 4 },
+    { day: 'Tue', hours: 5 },
+    { day: 'Wed', hours: 3 },
+    { day: 'Thu', hours: 6 },
+    { day: 'Fri', hours: 4 },
+    { day: 'Sat', hours: 2 },
+    { day: 'Sun', hours: 1 },
+  ];
+
+  const chartConfig = {
+    grade: {
+      label: 'GPA',
+      color: '#8884d8',
+    },
+  };
 
   useEffect(() => {
     fetchDashboardData();
@@ -216,9 +255,9 @@ const StudentDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-blue-50">
-      <header className="px-6 py-4 md:py-6 md:px-10">
-        <div className="container mx-auto flex justify-between items-center">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-blue-50 dark:to-slate-900">
+      <header className="w-full px-4 sm:px-6 md:px-8 lg:px-12 py-4 md:py-6">
+        <div className="w-full flex justify-between items-center">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate('/student-dashboard')}
@@ -231,6 +270,13 @@ const StudentDashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={toggleTheme}
+              className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-full hover:bg-primary/20 transition-colors"
+              title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+            >
+              {theme === 'light' ? <Moon className="h-4 w-4 text-primary" /> : <Sun className="h-4 w-4 text-primary" />}
+            </button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-full hover:bg-primary/20 transition-colors">
@@ -251,6 +297,10 @@ const StudentDashboard = () => {
                   <User className="mr-2 h-4 w-4" />
                   <span>View Profile</span>
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={toggleTheme}>
+                  {theme === 'light' ? <Moon className="mr-2 h-4 w-4" /> : <Sun className="mr-2 h-4 w-4" />}
+                  <span>{theme === 'light' ? 'Dark Mode' : 'Light Mode'}</span>
+                </DropdownMenuItem>
                 <DropdownMenuItem>
                   <BarChart2 className="mr-2 h-4 w-4" />
                   <span>GPA: {calculateGPA()}</span>
@@ -266,16 +316,16 @@ const StudentDashboard = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-6 py-8 md:px-10 md:py-12">
-        <div className="space-y-6">
+      <main className="w-full px-4 sm:px-6 md:px-8 lg:px-12 py-6 md:py-8 lg:py-12">
+        <div className="space-y-6 max-w-full">
           <div>
             <h2 className="text-xl text-muted-foreground mb-4">
               Here's an overview of your academic progress and upcoming activities.
             </h2>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <Card className="col-span-full lg:col-span-2">
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            <Card className="col-span-1 md:col-span-2 lg:col-span-2">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Bell className="h-5 w-5 text-primary" />
@@ -303,7 +353,7 @@ const StudentDashboard = () => {
                     {upcomingEvents.map((event, i) => (
                       <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                         <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-full bg-blue-100 text-blue-500">
+                          <div className="p-2 rounded-full bg-blue-100 text-blue-500 dark:bg-blue-900 dark:text-blue-400">
                             <CalendarDays className="h-4 w-4" />
                           </div>
                           <div>
@@ -361,7 +411,7 @@ const StudentDashboard = () => {
           <div>
             <h3 className="text-xl font-semibold mb-4">Quick Access</h3>
             <motion.div 
-              className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
+              className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
               variants={container}
               initial="hidden"
               animate="show"
@@ -372,20 +422,105 @@ const StudentDashboard = () => {
                     className={`cursor-pointer hover:shadow-md transition-all duration-300 bg-gradient-to-br ${feature.color} border-none overflow-hidden relative h-full`}
                     onClick={() => navigate(feature.path)}
                   >
-                    <div className="absolute -right-8 -top-8 w-24 h-24 rounded-full bg-white/20 blur-2xl"></div>
+                    <div className="absolute -right-8 -top-8 w-24 h-24 rounded-full bg-white/20 dark:bg-white/10 blur-2xl"></div>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                       <CardTitle className="text-lg font-medium">{feature.title}</CardTitle>
-                      <div className="rounded-full p-2 bg-white/50 backdrop-blur-sm">
+                      <div className="rounded-full p-2 bg-white/50 dark:bg-black/30 backdrop-blur-sm">
                         {feature.icon}
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <CardDescription className="text-black/60">{feature.description}</CardDescription>
+                      <CardDescription className="text-black/60 dark:text-white/70">{feature.description}</CardDescription>
                     </CardContent>
                   </Card>
                 </motion.div>
               ))}
             </motion.div>
+          </div>
+
+          <div>
+            <h3 className="text-xl font-semibold mb-4">Academic Performance</h3>
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart2 className="h-5 w-5 text-primary" />
+                    Grade Trend
+                  </CardTitle>
+                  <CardDescription>Your GPA over the last 6 months</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ChartContainer config={chartConfig} className="h-[200px] w-full">
+                    <LineChart data={gradeTrendData}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="month" className="text-xs" />
+                      <YAxis className="text-xs" domain={[0, 10]} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Line type="monotone" dataKey="grade" stroke="#8884d8" strokeWidth={2} dot={{ fill: '#8884d8' }} />
+                    </LineChart>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BookOpen className="h-5 w-5 text-primary" />
+                    Subject Breakdown
+                  </CardTitle>
+                  <CardDescription>Time distribution by subject</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ChartContainer config={chartConfig} className="h-[200px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={subjectBreakdownData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={40}
+                          outerRadius={70}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {subjectBreakdownData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-xl font-semibold mb-4">Weekly Activity</h3>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CalendarDays className="h-5 w-5 text-primary" />
+                  Study Hours This Week
+                </CardTitle>
+                <CardDescription>Your daily study time distribution</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={chartConfig} className="h-[150px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={weeklyActivityData}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="day" className="text-xs" />
+                      <YAxis className="text-xs" />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Line type="monotone" dataKey="hours" stroke="#82ca9d" strokeWidth={2} dot={{ fill: '#82ca9d' }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </main>

@@ -50,14 +50,6 @@ app.options('*', cors(corsOptions));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Log environment variables (without sensitive data)
-console.log('Environment check:');
-console.log('PORT:', process.env.PORT);
-console.log('NODE_ENV:', process.env.NODE_ENV);
-console.log('MONGODB_URI:', process.env.MONGODB_URI ? 'Set' : 'Not set');
-console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'Set' : 'Not set');
-console.log('ALLOWED_ORIGINS:', allowedOrigins);
-
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/tap', {
     useNewUrlParser: true,
@@ -135,5 +127,4 @@ app.use((req, res) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server is running on port ${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 }); 
