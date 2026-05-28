@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { User, Mail, Phone, BookOpen, Award, Save, X, Edit } from "lucide-react";
+import { User, Mail, Phone, BookOpen, Save, X, Edit } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { motion } from "framer-motion";
 import api from "@/api/axios";
@@ -47,25 +47,73 @@ const Profile = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState<ProfileData>(defaultProfileData);
     const [originalData, setOriginalData] = useState<ProfileData>(defaultProfileData);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Load profile data from localStorage on component mount
-        const storedProfile = localStorage.getItem('userProfile');
-        if (storedProfile) {
-            try {
-                const parsedData = JSON.parse(storedProfile);
-                setFormData(parsedData);
-                setOriginalData(parsedData);
-            } catch (error) {
-                console.error('Error parsing profile data:', error);
+        fetchProfileData();
+    }, [user]);
+
+    const fetchProfileData = async () => {
+        try {
+            setLoading(true);
+            // Fetch profile data from backend
+            const response = await api.get('/api/users/profile');
+            if ((response.data as any)?.success && (response.data as any)?.profile) {
+                const profileData = (response.data as any).profile;
+                setFormData(profileData);
+                setOriginalData(profileData);
+            } else if (user) {
+                // Fallback to user data from AuthContext if API fails
+                setFormData({
+                    firstName: user.username?.split(' ')[0] || 'John',
+                    lastName: user.username?.split(' ').slice(1).join(' ') || 'Doe',
+                    email: user.email || 'student@example.com',
+                    phone: '',
+                    bio: '',
+                    year: '',
+                    major: '',
+                    gpa: ''
+                });
+                setOriginalData({
+                    firstName: user.username?.split(' ')[0] || 'John',
+                    lastName: user.username?.split(' ').slice(1).join(' ') || 'Doe',
+                    email: user.email || 'student@example.com',
+                    phone: '',
+                    bio: '',
+                    year: '',
+                    major: '',
+                    gpa: ''
+                });
             }
-        } else {
-            // If no data in localStorage, use default and save it
-            localStorage.setItem('userProfile', JSON.stringify(defaultProfileData));
-            setFormData(defaultProfileData);
-            setOriginalData(defaultProfileData);
+        } catch (error) {
+            console.error('Error fetching profile data:', error);
+            // Fallback to user data from AuthContext
+            if (user) {
+                setFormData({
+                    firstName: user.username?.split(' ')[0] || 'John',
+                    lastName: user.username?.split(' ').slice(1).join(' ') || 'Doe',
+                    email: user.email || 'student@example.com',
+                    phone: '',
+                    bio: '',
+                    year: '',
+                    major: '',
+                    gpa: ''
+                });
+                setOriginalData({
+                    firstName: user.username?.split(' ')[0] || 'John',
+                    lastName: user.username?.split(' ').slice(1).join(' ') || 'Doe',
+                    email: user.email || 'student@example.com',
+                    phone: '',
+                    bio: '',
+                    year: '',
+                    major: '',
+                    gpa: ''
+                });
+            }
+        } finally {
+            setLoading(false);
         }
-    }, []);
+    };
 
     const handleInputChange = (field: keyof ProfileData, value: string) => {
         setFormData(prev => ({
@@ -108,6 +156,10 @@ const Profile = () => {
         setIsEditing(false);
         setFormData(originalData);
     };
+
+    if (loading) {
+        return <div className="flex items-center justify-center min-h-screen">Loading profile...</div>;
+    }
 
     return (
         <div className="w-full p-4 sm:p-6 md:p-8 lg:px-12 space-y-6">
@@ -157,10 +209,9 @@ const Profile = () => {
             </motion.div>
 
             <Tabs defaultValue="personal" className="space-y-4">
-                <TabsList className="grid w-full grid-cols-3 bg-muted dark:bg-slate-800 rounded-2xl p-1">
+                <TabsList className="grid w-full grid-cols-2 bg-muted dark:bg-slate-800 rounded-2xl p-1">
                     <TabsTrigger value="personal" className="rounded-xl">Personal Info</TabsTrigger>
                     <TabsTrigger value="academic" className="rounded-xl">Academic</TabsTrigger>
-                    <TabsTrigger value="achievements" className="rounded-xl">Achievements</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="personal" className="space-y-4">
@@ -189,7 +240,7 @@ const Profile = () => {
                                     </Avatar>
                                     <div>
                                         <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{formData.firstName} {formData.lastName}</h3>
-                                        <p className="text-sm text-muted-foreground dark:text-gray-400">Student</p>
+                                        <p className="text-sm text-muted-foreground dark:text-gray-400 capitalize">{user?.role || 'User'}</p>
                                     </div>
                                 </div>
 
@@ -321,77 +372,6 @@ const Profile = () => {
                                         <Badge variant="secondary" className="rounded-full dark:bg-slate-700 dark:text-gray-200">Database Systems</Badge>
                                         <Badge variant="secondary" className="rounded-full dark:bg-slate-700 dark:text-gray-200">Software Engineering</Badge>
                                         <Badge variant="secondary" className="rounded-full dark:bg-slate-700 dark:text-gray-200">Computer Networks</Badge>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
-                </TabsContent>
-
-                <TabsContent value="achievements" className="space-y-4">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3 }}
-                    >
-                        <Card className="backdrop-blur-sm bg-white/50 dark:bg-slate-800/50 border-2 dark:border-slate-700 rounded-2xl">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Award className="h-5 w-5 text-primary" />
-                                    Achievements & Activities
-                                </CardTitle>
-                                <CardDescription className="dark:text-gray-400">
-                                    Your accomplishments and extracurricular activities
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                                <div className="space-y-4">
-                                    <h4 className="font-medium text-gray-900 dark:text-white">Academic Achievements</h4>
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between p-4 border-2 rounded-xl dark:border-slate-600 bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-950/30 dark:to-amber-900/30">
-                                            <div className="flex items-center gap-3">
-                                                <Award className="h-8 w-8 text-yellow-500" />
-                                                <div>
-                                                    <p className="font-medium text-gray-900 dark:text-white">Dean's List</p>
-                                                    <p className="text-sm text-muted-foreground dark:text-gray-400">Fall 2023, Spring 2024</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center justify-between p-4 border-2 rounded-xl dark:border-slate-600 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-900/30">
-                                            <div className="flex items-center gap-3">
-                                                <Award className="h-8 w-8 text-blue-500" />
-                                                <div>
-                                                    <p className="font-medium text-gray-900 dark:text-white">Hackathon Winner</p>
-                                                    <p className="text-sm text-muted-foreground dark:text-gray-400">Annual Tech Challenge 2024</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <Separator className="dark:bg-slate-700" />
-
-                                <div className="space-y-4">
-                                    <h4 className="font-medium text-gray-900 dark:text-white">Extracurricular Activities</h4>
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between p-4 border-2 rounded-xl dark:border-slate-600 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-900/30">
-                                            <div>
-                                                <p className="font-medium text-gray-900 dark:text-white">Computer Science Club</p>
-                                                <p className="text-sm text-muted-foreground dark:text-gray-400">Member • 2022 - Present</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center justify-between p-4 border-2 rounded-xl dark:border-slate-600 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-900/30">
-                                            <div>
-                                                <p className="font-medium text-gray-900 dark:text-white">Peer Tutoring Program</p>
-                                                <p className="text-sm text-muted-foreground dark:text-gray-400">Tutor • 2023 - Present</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center justify-between p-4 border-2 rounded-xl dark:border-slate-600 bg-gradient-to-r from-rose-50 to-red-50 dark:from-rose-950/30 dark:to-red-900/30">
-                                            <div>
-                                                <p className="font-medium text-gray-900 dark:text-white">Student Government</p>
-                                                <p className="text-sm text-muted-foreground dark:text-gray-400">Class Representative • 2024</p>
-                                            </div>
-                                        </div>
                                     </div>
                                 </div>
                             </CardContent>

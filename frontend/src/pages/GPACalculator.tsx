@@ -157,7 +157,7 @@ const GPACalculator = () => {
   };
 
   return (
-    <div className="container max-w-5xl mx-auto p-4 space-y-6">
+    <div className="w-full p-4 space-y-6">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}

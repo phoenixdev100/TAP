@@ -1,4 +1,5 @@
 import axios from 'axios';
+import logger from '../utils/logger';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_BACKEND_URL,
@@ -16,7 +17,7 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    console.log('API Request:', {
+    logger.log('API Request:', {
       method: config.method,
       url: config.url,
       headers: config.headers,
@@ -25,7 +26,7 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error('API Request Error:', error);
+    logger.error('API Request Error:', error);
     return Promise.reject(error);
   }
 );
@@ -33,7 +34,7 @@ api.interceptors.request.use(
 // Add a response interceptor
 api.interceptors.response.use(
   (response) => {
-    console.log('API Response:', {
+    logger.log('API Response:', {
       status: response.status,
       data: response.data
     });

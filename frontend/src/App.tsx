@@ -20,6 +20,12 @@ import StudentDashboard from "./pages/StudentDashboard";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import Unauthorized from "./pages/Unauthorized";
+import ClassManagement from "./pages/admin/ClassManagement";
+import TeacherManagement from "./pages/admin/TeacherManagement";
+import StudentManagement from "./pages/admin/StudentManagement";
+import AttendanceManagement from "./pages/admin/AttendanceManagement";
+import TimetableManagement from "./pages/admin/TimetableManagement";
+import NotesManagement from "./pages/admin/NotesManagement";
 
 const queryClient = new QueryClient();
 
@@ -68,6 +74,54 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRole="college_admin">
                   <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/classes"
+              element={
+                <ProtectedRoute requiredRole="college_admin">
+                  <ClassManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/teachers"
+              element={
+                <ProtectedRoute requiredRole="college_admin">
+                  <TeacherManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/students"
+              element={
+                <ProtectedRoute requiredRole="college_admin">
+                  <StudentManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/attendance"
+              element={
+                <ProtectedRoute requiredRole="college_admin">
+                  <AttendanceManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/timetable"
+              element={
+                <ProtectedRoute requiredRole="college_admin">
+                  <TimetableManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/notes"
+              element={
+                <ProtectedRoute requiredRole="college_admin">
+                  <NotesManagement />
                 </ProtectedRoute>
               }
             />

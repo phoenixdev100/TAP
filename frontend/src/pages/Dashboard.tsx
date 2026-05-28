@@ -214,14 +214,14 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-blue-50">
       <header className="px-6 py-4 md:py-6 md:px-10">
-        <div className="container mx-auto">
+        <div className="w-full">
           <h1 className="text-2xl md:text-3xl font-bold">
             Welcome, <span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">{user.username || 'User'}</span>
           </h1>
         </div>
       </header>
 
-      <main className="container mx-auto px-6 py-8 md:px-10 md:py-12">
+      <main className="w-full px-6 py-8 md:px-10 md:py-12">
         <div className="space-y-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>

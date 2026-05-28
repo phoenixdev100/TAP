@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarDays, BookOpen, ListTodo, FileText, UserCheck, Bell, BarChart2, LogOut, Users, Settings, Sparkles, User } from "lucide-react";
+import { CalendarDays, BookOpen, ListTodo, FileText, UserCheck, Bell, BarChart2, LogOut, Users, Settings, Sparkles, User, Moon, Sun } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import api from '@/api/axios';
 import {
   DropdownMenu,
@@ -22,42 +23,42 @@ const features = [
     description: "Create and manage class schedules",
     icon: <CalendarDays className="h-8 w-8 text-blue-500" />,
     path: "/schedule",
-    color: "from-blue-50 to-indigo-50"
+    color: "from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950"
   },
   {
     title: "Assignments",
     description: "Create and grade assignments",
     icon: <ListTodo className="h-8 w-8 text-amber-500" />,
     path: "/assignments",
-    color: "from-amber-50 to-yellow-50"
+    color: "from-amber-50 to-yellow-50 dark:from-amber-950 dark:to-yellow-950"
   },
   {
     title: "Study Materials",
     description: "Upload and manage study notes",
     icon: <FileText className="h-8 w-8 text-emerald-500" />,
     path: "/notes",
-    color: "from-emerald-50 to-teal-50"
+    color: "from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950"
   },
   {
     title: "Attendance",
     description: "Track student attendance",
     icon: <UserCheck className="h-8 w-8 text-purple-500" />,
     path: "/attendance",
-    color: "from-purple-50 to-fuchsia-50"
+    color: "from-purple-50 to-fuchsia-50 dark:from-purple-950 dark:to-fuchsia-950"
   },
   {
     title: "Student Management",
     description: "View and manage student data",
     icon: <Users className="h-8 w-8 text-cyan-500" />,
     path: "/students",
-    color: "from-cyan-50 to-sky-50"
+    color: "from-cyan-50 to-sky-50 dark:from-cyan-950 dark:to-sky-950"
   },
   {
     title: "Settings",
     description: "Manage your teaching preferences",
     icon: <Settings className="h-8 w-8 text-rose-500" />,
     path: "/settings",
-    color: "from-rose-50 to-pink-50"
+    color: "from-rose-50 to-pink-50 dark:from-rose-950 dark:to-pink-950"
   }
 ];
 
@@ -80,6 +81,7 @@ const TeacherDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [schedules, setSchedules] = useState([]);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -89,6 +91,8 @@ const TeacherDashboard = () => {
     totalClasses: 0,
     avgAttendance: 0,
     pendingAssignments: 0,
+    assignmentGradingRate: 0,
+    studentEngagement: 0,
     currentSemester: 'Spring 2024'
   });
 
@@ -109,8 +113,8 @@ const TeacherDashboard = () => {
       const events = generateUpcomingEvents(userSchedules);
       setUpcomingEvents(events);
       
-      // Calculate teacher stats
-      const stats = calculateTeacherStats(userSchedules);
+      // Calculate teacher stats from real data
+      const stats = await calculateTeacherStats(userSchedules);
       setTeacherStats(stats);
       
     } catch (error) {
@@ -154,14 +158,44 @@ const TeacherDashboard = () => {
     return events.slice(0, 3);
   };
 
-  const calculateTeacherStats = (schedules) => {
-    return {
-      totalStudents: Math.floor(Math.random() * 50) + 20, // Mock data
-      totalClasses: schedules.length,
-      avgAttendance: Math.min(95, 80 + schedules.length * 3),
-      pendingAssignments: Math.floor(Math.random() * 10) + 5,
-      currentSemester: 'Spring 2024'
-    };
+  const calculateTeacherStats = async (schedules) => {
+    try {
+      // Fetch real data from backend
+      const [attendanceResponse, assignmentsResponse, studentsResponse] = await Promise.all([
+        api.get('/api/analytics/attendance'),
+        api.get('/api/analytics/assignments'),
+        api.get('/api/users')
+      ]);
+      
+      const attendanceData = (attendanceResponse.data as any)?.data || {};
+      const assignmentData = (assignmentsResponse.data as any)?.data || {};
+      const usersData = (studentsResponse.data as any)?.data || [];
+      
+      // Count students (users with role 'student')
+      const totalStudents = usersData.filter((u: any) => u.role === 'student').length;
+      
+      return {
+        totalStudents: totalStudents || 0,
+        totalClasses: schedules.length,
+        avgAttendance: attendanceData.attendancePercentage || 0,
+        pendingAssignments: assignmentData.pendingCount || 0,
+        assignmentGradingRate: assignmentData.submissionRate || 0,
+        studentEngagement: attendanceData.attendancePercentage || 0,
+        currentSemester: 'Spring 2024'
+      };
+    } catch (error) {
+      console.error('Error fetching teacher stats:', error);
+      // Fallback to calculated values if backend endpoints don't exist
+      return {
+        totalStudents: 0,
+        totalClasses: schedules.length,
+        avgAttendance: 0,
+        pendingAssignments: 0,
+        assignmentGradingRate: 0,
+        studentEngagement: 0,
+        currentSemester: 'Spring 2024'
+      };
+    }
   };
 
   const handleLogout = () => {
@@ -170,9 +204,9 @@ const TeacherDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-blue-50 dark:to-slate-900">
       <header className="px-6 py-4 md:py-6 md:px-10">
-        <div className="container mx-auto flex justify-between items-center">
+        <div className="w-full flex justify-between items-center">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate('/teacher-dashboard')}
@@ -185,6 +219,13 @@ const TeacherDashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={toggleTheme}
+              className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-full hover:bg-primary/20 transition-colors"
+              title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+            >
+              {theme === 'light' ? <Moon className="h-4 w-4 text-primary" /> : <Sun className="h-4 w-4 text-primary" />}
+            </button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-full hover:bg-primary/20 transition-colors">
@@ -220,7 +261,7 @@ const TeacherDashboard = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-6 py-8 md:px-10 md:py-12">
+      <main className="w-full px-6 py-8 md:px-10 md:py-12">
         <div className="space-y-6">
           <div>
             <h2 className="text-xl text-muted-foreground mb-4">
@@ -275,6 +316,36 @@ const TeacherDashboard = () => {
             </Card>
           </div>
 
+          <div>
+            <h3 className="text-xl font-semibold mb-4">Management Tools</h3>
+            <motion.div 
+              className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+              variants={container}
+              initial="hidden"
+              animate="show"
+            >
+              {features.map((feature, i) => (
+                <motion.div key={i} variants={item}>
+                  <Card 
+                    className={`cursor-pointer hover:shadow-md transition-all duration-300 bg-gradient-to-br ${feature.color} border-none overflow-hidden relative h-full`}
+                    onClick={() => navigate(feature.path)}
+                  >
+                    <div className="absolute -right-8 -top-8 w-24 h-24 rounded-full bg-white/20 dark:bg-white/10 blur-2xl"></div>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-lg font-medium">{feature.title}</CardTitle>
+                      <div className="rounded-full p-2 bg-white/50 dark:bg-black/30 backdrop-blur-sm">
+                        {feature.icon}
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <CardDescription className="text-black/60 dark:text-white/70">{feature.description}</CardDescription>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
+
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             <Card className="col-span-full lg:col-span-2">
               <CardHeader>
@@ -304,7 +375,7 @@ const TeacherDashboard = () => {
                     {upcomingEvents.map((event, i) => (
                       <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                         <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-full bg-blue-100 text-blue-500">
+                          <div className="p-2 rounded-full bg-blue-100 text-blue-500 dark:bg-blue-900 dark:text-blue-400">
                             <CalendarDays className="h-4 w-4" />
                           </div>
                           <div>
@@ -345,49 +416,19 @@ const TeacherDashboard = () => {
                 <div>
                   <div className="flex justify-between mb-2">
                     <span className="text-sm font-medium">Assignment Grading</span>
-                    <span className="text-sm text-muted-foreground">75%</span>
+                    <span className="text-sm text-muted-foreground">{teacherStats.assignmentGradingRate}%</span>
                   </div>
-                  <Progress value={75} className="h-2" />
+                  <Progress value={teacherStats.assignmentGradingRate} className="h-2" />
                 </div>
                 <div>
                   <div className="flex justify-between mb-2">
                     <span className="text-sm font-medium">Student Engagement</span>
-                    <span className="text-sm text-muted-foreground">82%</span>
+                    <span className="text-sm text-muted-foreground">{teacherStats.studentEngagement}%</span>
                   </div>
-                  <Progress value={82} className="h-2" />
+                  <Progress value={teacherStats.studentEngagement} className="h-2" />
                 </div>
               </CardContent>
             </Card>
-          </div>
-
-          <div>
-            <h3 className="text-xl font-semibold mb-4">Management Tools</h3>
-            <motion.div 
-              className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
-              variants={container}
-              initial="hidden"
-              animate="show"
-            >
-              {features.map((feature, i) => (
-                <motion.div key={i} variants={item}>
-                  <Card 
-                    className={`cursor-pointer hover:shadow-md transition-all duration-300 bg-gradient-to-br ${feature.color} border-none overflow-hidden relative h-full`}
-                    onClick={() => navigate(feature.path)}
-                  >
-                    <div className="absolute -right-8 -top-8 w-24 h-24 rounded-full bg-white/20 blur-2xl"></div>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-lg font-medium">{feature.title}</CardTitle>
-                      <div className="rounded-full p-2 bg-white/50 backdrop-blur-sm">
-                        {feature.icon}
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <CardDescription className="text-black/60">{feature.description}</CardDescription>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </motion.div>
           </div>
         </div>
       </main>

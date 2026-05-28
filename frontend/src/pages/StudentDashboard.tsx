@@ -180,30 +180,30 @@ const StudentDashboard = () => {
 
   const calculateAcademicStats = async (schedules) => {
     try {
-      // Fetch real academic data from backend
+      // Fetch real academic data from backend using correct API endpoints
       const [attendanceResponse, assignmentsResponse] = await Promise.all([
-        api.get('/api/attendance/stats'),
-        api.get('/api/assignments/stats')
+        api.get('/api/analytics/attendance'),
+        api.get('/api/analytics/assignments')
       ]);
       
-      const attendanceData = (attendanceResponse.data as any) || {};
-      const assignmentData = (assignmentsResponse.data as any) || {};
+      const attendanceData = (attendanceResponse.data as any)?.data || {};
+      const assignmentData = (assignmentsResponse.data as any)?.data || {};
       
       return {
-        attendanceRate: attendanceData.rate || 0,
-        assignmentCompletion: assignmentData.completionRate || 0,
-        studyTime: attendanceData.studyHours || 0,
-        gpa: attendanceData.gpa || 0,
-        currentSemester: attendanceData.semester || 'Spring 2024'
+        attendanceRate: attendanceData.attendancePercentage || 0,
+        assignmentCompletion: assignmentData.submissionRate || 0,
+        studyTime: 0, // This would need a dedicated endpoint
+        gpa: assignmentData.averageMarks ? parseFloat((assignmentData.averageMarks / 10).toFixed(1)) : 0,
+        currentSemester: 'Spring 2024'
       };
     } catch (error) {
       console.error('Error fetching academic stats:', error);
-      // Fallback to calculated values if backend endpoints don't exist
+      // Fallback to zero values if backend endpoints don't exist
       return {
-        attendanceRate: Math.min(95, 85 + schedules.length * 2),
-        assignmentCompletion: Math.min(90, 75 + schedules.length * 3),
-        studyTime: Math.min(20, 10 + schedules.length),
-        gpa: parseFloat((3.5 + schedules.length * 0.1).toFixed(1)),
+        attendanceRate: 0,
+        assignmentCompletion: 0,
+        studyTime: 0,
+        gpa: 0,
         currentSemester: 'Spring 2024'
       };
     }

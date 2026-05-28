@@ -60,6 +60,10 @@ const HomePage = () => {
     if (activeTab === 'signup') {
       if (!name.trim()) {
         newErrors.name = "Name is required";
+      } else if (name.length < 2) {
+        newErrors.name = "Name must be at least 2 characters";
+      } else if (name.length > 50) {
+        newErrors.name = "Name must be less than 50 characters";
       }
     }
 
@@ -73,6 +77,8 @@ const HomePage = () => {
       newErrors.password = "Password is required";
     } else if (password.length < 6) {
       newErrors.password = "Password must be at least 6 characters";
+    } else if (password.length > 128) {
+      newErrors.password = "Password must be less than 128 characters";
     }
 
     setErrors(newErrors);
@@ -81,6 +87,12 @@ const HomePage = () => {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate form before submission
+    if (!validateForm()) {
+      return;
+    }
+    
     setErrors({});
     setIsLoading(true);
 
@@ -96,10 +108,6 @@ const HomePage = () => {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         navigateToDashboard(user.role);
       } else {
-        if (!name.trim()) {
-          setErrors({ name: 'Name is required' });
-          return;
-        }
         await signup(name, email, password, role);
         toast({
           title: "Account created",
@@ -223,7 +231,7 @@ const HomePage = () => {
       </div>
 
       <header className="px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4 md:py-6 lg:py-8 relative z-10">
-        <div className="container mx-auto flex justify-between items-center">
+        <div className="w-full flex justify-between items-center">
           <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent flex items-center gap-2">
             <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 lg:h-8 lg:w-8 text-primary" />
             TAP
@@ -238,20 +246,20 @@ const HomePage = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 md:px-6 md:py-8 lg:px-8 lg:py-10 relative z-10 min-h-[calc(100vh-100px)] flex items-center">
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 md:gap-8 lg:gap-10 items-center w-full">
+      <main className="w-full px-2 sm:px-4 py-2 sm:py-4 md:px-6 md:py-6 lg:px-8 lg:py-8 relative z-10 min-h-[calc(100vh-100px)] flex items-center">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-2 sm:gap-4 md:gap-6 lg:gap-8 items-center w-full">
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6 }}
-            className="flex flex-col space-y-3 sm:space-y-4 md:space-y-6"
+            className="flex flex-col space-y-2 sm:space-y-3 md:space-y-4"
           >
-            <div className="space-y-3 sm:space-y-4">
+            <div className="space-y-2 sm:space-y-3">
               <motion.h2 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold tracking-tight text-gray-900 dark:text-white"
+                className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tight text-gray-900 dark:text-white"
               >
                 Your Ultimate <span className="text-gradient bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">College Helper</span>
               </motion.h2>
@@ -269,7 +277,7 @@ const HomePage = () => {
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-3 md:gap-4"
+              className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-3 md:gap-4 lg:gap-5"
             >
               {features.map((feature, i) => (
                 <motion.div 
@@ -289,16 +297,16 @@ const HomePage = () => {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl mx-auto mt-4 sm:mt-0"
+            className="w-full max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl mx-auto mt-4 sm:mt-0"
           >
             <Card className="w-full shadow-2xl bg-background/95 dark:bg-slate-800/95 backdrop-blur-sm border-white/20 dark:border-slate-700 relative overflow-hidden">
               <div className="absolute -top-20 -right-20 w-40 h-40 bg-primary/10 rounded-full blur-3xl"></div>
               <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl"></div>
-              <CardHeader className="relative">
-                <div className="flex border-b space-x-4 dark:border-slate-700">
+              <CardHeader className="relative pb-4">
+                <div className="flex border-b space-x-4 dark:border-slate-700 pb-3">
                   <button
                     onClick={() => setActiveTab('login')}
-                    className={`pb-2 px-2 font-medium text-sm transition-colors ${
+                    className={`pb-2 px-3 font-medium text-base transition-colors ${
                       activeTab === 'login' 
                         ? 'border-b-2 border-primary text-primary' 
                         : 'text-muted-foreground dark:text-gray-400 hover:text-primary'
@@ -308,7 +316,7 @@ const HomePage = () => {
                   </button>
                   <button
                     onClick={() => setActiveTab('signup')}
-                    className={`pb-2 px-2 font-medium text-sm transition-colors ${
+                    className={`pb-2 px-3 font-medium text-base transition-colors ${
                       activeTab === 'signup' 
                         ? 'border-b-2 border-primary text-primary' 
                         : 'text-muted-foreground dark:text-gray-400 hover:text-primary'
@@ -317,25 +325,25 @@ const HomePage = () => {
                     Sign Up
                   </button>
                 </div>
-                <CardTitle className="mt-4 text-xl sm:text-2xl text-gray-900 dark:text-white">
+                <CardTitle className="mt-4 text-2xl sm:text-3xl md:text-4xl text-gray-900 dark:text-white">
                   {activeTab === 'login' ? 'Welcome back!' : 'Create an account'}
                 </CardTitle>
-                <CardDescription className="dark:text-gray-400">
+                <CardDescription className="dark:text-gray-400 text-base sm:text-lg">
                   {activeTab === 'login' 
                     ? 'Enter your credentials to access your account' 
                     : 'Fill out the form below to get started'}
                 </CardDescription>
               </CardHeader>
               <form onSubmit={handleAuth}>
-                <CardContent className="space-y-4 relative">
+                <CardContent className="space-y-5 relative">
                   {activeTab === 'signup' && (
                     <motion.div 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3 }}
-                      className="space-y-2"
+                      className="space-y-3"
                     >
-                      <label htmlFor="name" className="text-sm font-medium text-gray-900 dark:text-white">
+                      <label htmlFor="name" className="text-base font-medium text-gray-900 dark:text-white">
                         Full Name
                       </label>
                       <Input
@@ -343,7 +351,7 @@ const HomePage = () => {
                         placeholder="Enter your name"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className={`bg-background/50 dark:bg-slate-700/50 backdrop-blur-sm ${errors.name ? 'border-red-500' : ''}`}
+                        className={`bg-background/50 dark:bg-slate-700/50 backdrop-blur-sm h-12 text-base ${errors.name ? 'border-red-500' : ''}`}
                         disabled={isLoading}
                       />
                       {errors.name && (
@@ -355,9 +363,9 @@ const HomePage = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3, delay: activeTab === 'signup' ? 0.1 : 0 }}
-                    className="space-y-2"
+                    className="space-y-3"
                   >
-                    <label htmlFor="email" className="text-sm font-medium text-gray-900 dark:text-white">
+                    <label htmlFor="email" className="text-base font-medium text-gray-900 dark:text-white">
                       Email
                     </label>
                     <Input
@@ -366,7 +374,7 @@ const HomePage = () => {
                       placeholder="Enter your email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className={`bg-background/50 dark:bg-slate-700/50 backdrop-blur-sm ${errors.email ? 'border-red-500' : ''}`}
+                      className={`bg-background/50 dark:bg-slate-700/50 backdrop-blur-sm h-12 text-base ${errors.email ? 'border-red-500' : ''}`}
                       disabled={isLoading}
                     />
                     {errors.email && (
@@ -377,9 +385,9 @@ const HomePage = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3, delay: activeTab === 'signup' ? 0.2 : 0.1 }}
-                    className="space-y-2"
+                    className="space-y-3"
                   >
-                    <label htmlFor="password" className="text-sm font-medium text-gray-900 dark:text-white">
+                    <label htmlFor="password" className="text-base font-medium text-gray-900 dark:text-white">
                       Password
                     </label>
                     <Input
@@ -388,7 +396,7 @@ const HomePage = () => {
                       placeholder="Enter your password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className={`bg-background/50 dark:bg-slate-700/50 backdrop-blur-sm ${errors.password ? 'border-red-500' : ''}`}
+                      className={`bg-background/50 dark:bg-slate-700/50 backdrop-blur-sm h-12 text-base ${errors.password ? 'border-red-500' : ''}`}
                       disabled={isLoading}
                     />
                     {errors.password && (
@@ -400,23 +408,23 @@ const HomePage = () => {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3, delay: 0.3 }}
-                      className="space-y-2"
+                      className="space-y-3"
                     >
-                      <label htmlFor="role" className="text-sm font-medium text-gray-900 dark:text-white">
+                      <label htmlFor="role" className="text-base font-medium text-gray-900 dark:text-white">
                         Role
                       </label>
                       <select
                         id="role"
                         value={role}
                         onChange={(e) => setRole(e.target.value as UserRole)}
-                        className="w-full px-3 py-2 bg-background/50 dark:bg-slate-700/50 backdrop-blur-sm border border-input dark:border-slate-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 text-gray-900 dark:text-white"
+                        className="w-full px-4 py-3 bg-background/50 dark:bg-slate-700/50 backdrop-blur-sm border border-input dark:border-slate-600 rounded-md text-base focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 text-gray-900 dark:text-white h-12"
                         disabled={isLoading}
                       >
                         <option value="student">Student</option>
                         <option value="teacher">Teacher</option>
                         <option value="college_admin">College Administrator</option>
                       </select>
-                      <p className="text-xs text-muted-foreground dark:text-gray-400">
+                      <p className="text-sm text-muted-foreground dark:text-gray-400">
                         {role === 'student' && 'View your classes, assignments, and attendance'}
                         {role === 'teacher' && 'Manage classes, assignments, and track student progress'}
                         {role === 'college_admin' && 'Full platform management and administration'}
@@ -424,10 +432,10 @@ const HomePage = () => {
                     </motion.div>
                   )}
                 </CardContent>
-                <CardFooter className="flex flex-col">
+                <CardFooter className="flex flex-col pt-4">
                   <Button 
                     type="submit" 
-                    className="w-full bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 transition-all duration-300"
+                    className="w-full bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 transition-all duration-300 h-12 text-base"
                     disabled={isLoading}
                   >
                     {isLoading ? (
@@ -440,7 +448,7 @@ const HomePage = () => {
                     )}
                   </Button>
                   {activeTab === 'login' && (
-                    <p className="mt-2 text-sm text-center text-muted-foreground">
+                    <p className="mt-3 text-base text-center text-muted-foreground">
                       Don't have an account?{" "}
                       <button
                         type="button"
@@ -452,7 +460,7 @@ const HomePage = () => {
                     </p>
                   )}
                   {activeTab === 'signup' && (
-                    <p className="mt-2 text-sm text-center text-muted-foreground">
+                    <p className="mt-3 text-base text-center text-muted-foreground">
                       Already have an account?{" "}
                       <button
                         type="button"

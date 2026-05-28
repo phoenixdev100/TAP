@@ -176,10 +176,10 @@ const seedDatabase = async () => {
       }
     ]);
 
-    console.log('✅ Database seeded successfully');
+    logger.log('✅ Database seeded successfully');
     process.exit(0);
   } catch (error) {
-    console.error('❌ Seeding failed:', error);
+    logger.error('❌ Seeding failed:', error);
     process.exit(1);
   }
 };
@@ -289,7 +289,7 @@ Structure your API with versioning:
 **Generate Strong JWT Secret:**
 ```bash
 # Generate random string
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+node -e "logger.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
 **Add to `.env`:**
@@ -389,9 +389,9 @@ const sendEmail = async (to, subject, html) => {
       subject,
       html
     });
-    console.log('✅ Email sent successfully');
+    logger.log('✅ Email sent successfully');
   } catch (error) {
-    console.error('❌ Email sending failed:', error);
+    logger.error('❌ Email sending failed:', error);
   }
 };
 
