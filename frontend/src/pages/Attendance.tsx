@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { UserCheck, Calendar, BarChart3, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import api from '@/api/axios';
@@ -39,6 +40,7 @@ interface Class {
 
 const Attendance = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [classes, setClasses] = useState<Class[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,6 +49,9 @@ const Attendance = () => {
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [selectedDate, setSelectedDate] = useState('');
   const { toast } = useToast();
+
+  const isStudent = user?.role === 'student';
+  const isTeacher = user?.role === 'teacher' || user?.role === 'college_admin';
 
   const [markFormData, setMarkFormData] = useState<Record<string, 'present' | 'absent'>>({});
 
@@ -57,8 +62,28 @@ const Attendance = () => {
   });
 
   useEffect(() => {
-    fetchClasses();
-  }, []);
+    if (isStudent) {
+      fetchStudentAttendance();
+    } else {
+      fetchClasses();
+    }
+  }, [isStudent]);
+
+  const fetchStudentAttendance = async () => {
+    try {
+      const response = await api.get('/api/attendance/records');
+      const records = (response.data as any)?.records || [];
+      setAttendance(records);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch attendance",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchClasses = async () => {
     try {
@@ -158,7 +183,7 @@ const Attendance = () => {
         className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
       >
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/teacher-dashboard')}>
+          <Button variant="ghost" size="icon" onClick={() => navigate(isStudent ? '/student-dashboard' : '/teacher-dashboard')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
@@ -166,25 +191,26 @@ const Attendance = () => {
               Attendance Management
             </h2>
             <p className="text-muted-foreground dark:text-gray-400 text-sm sm:text-base">
-              Take attendance and view reports
+              {isStudent ? 'View your attendance records' : 'Take attendance and view reports'}
             </p>
           </div>
         </div>
         <div className="flex gap-2">
-          <Dialog open={markDialogOpen} onOpenChange={(open) => {
-            setMarkDialogOpen(open);
-            if (!open) {
-              setSelectedClass(null);
-              setSelectedDate('');
-              setMarkFormData({});
-            }
-          }}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="bg-gradient-to-r from-[#7C3AED] to-[#A855F7] hover:from-[#6D28D9] hover:to-[#9333EA] text-white shadow-lg transition-all duration-300 border-0">
-                <Calendar className="h-4 w-4 mr-2" />
-                Mark Attendance
-              </Button>
-            </DialogTrigger>
+          {!isStudent && (
+            <Dialog open={markDialogOpen} onOpenChange={(open) => {
+              setMarkDialogOpen(open);
+              if (!open) {
+                setSelectedClass(null);
+                setSelectedDate('');
+                setMarkFormData({});
+              }
+            }}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="bg-gradient-to-r from-[#7C3AED] to-[#A855F7] hover:from-[#6D28D9] hover:to-[#9333EA] text-white shadow-lg transition-all duration-300 border-0">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Mark Attendance
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-[600px]">
               <DialogHeader>
                 <DialogTitle>Mark Attendance</DialogTitle>
@@ -263,13 +289,15 @@ const Attendance = () => {
               </form>
             </DialogContent>
           </Dialog>
-          <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="bg-gradient-to-r from-[#7C3AED] to-[#A855F7] hover:from-[#6D28D9] hover:to-[#9333EA] text-white shadow-lg transition-all duration-300 border-0">
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Generate Report
-              </Button>
-            </DialogTrigger>
+          )}
+          {!isStudent && (
+            <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="bg-gradient-to-r from-[#7C3AED] to-[#A855F7] hover:from-[#6D28D9] hover:to-[#9333EA] text-white shadow-lg transition-all duration-300 border-0">
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Generate Report
+                </Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Attendance Report</DialogTitle>
@@ -316,6 +344,7 @@ const Attendance = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          )}
         </div>
       </motion.div>
 
@@ -336,7 +365,7 @@ const Attendance = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Student</TableHead>
+                      {!isStudent && <TableHead>Student</TableHead>}
                       <TableHead>Class</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Status</TableHead>
@@ -345,7 +374,7 @@ const Attendance = () => {
                   <TableBody>
                     {attendance.map((record) => (
                       <TableRow key={record._id}>
-                        <TableCell className="font-medium">{record.student?.username || 'Unknown'}</TableCell>
+                        {!isStudent && <TableCell className="font-medium">{record.student?.username || 'Unknown'}</TableCell>}
                         <TableCell>{record.className}</TableCell>
                         <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
                         <TableCell>

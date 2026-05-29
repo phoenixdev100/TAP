@@ -89,12 +89,16 @@ router.get('/', auth, async (req, res) => {
     let assignments;
 
     if (userRole === 'student') {
-      // Student sees assignments assigned to them
-      assignments = await Assignment.find({ 
-        assignedTo: userId,
+      // Student sees assignments for classes they are enrolled in
+      const Class = require('../models/Class');
+      const enrolledClasses = await Class.find({ students: userId }).select('_id');
+      const classIds = enrolledClasses.map(c => c._id);
+
+      assignments = await Assignment.find({
+        classId: { $in: classIds },
         status: 'published'
       }).populate('createdBy', 'username').sort({ dueDate: 1 });
-      
+
       // Format for student view
       assignments = assignments.map(assignment => {
         const submission = assignment.submissions.find(sub => sub.student.toString() === userId.toString());
@@ -104,26 +108,27 @@ router.get('/', auth, async (req, res) => {
           description: assignment.description,
           dueDate: assignment.dueDate.toISOString().split('T')[0],
           className: assignment.className,
-          status: assignment.status,
+          status: submission ? 'completed' : 'pending',
           submission: submission ? {
             submittedAt: submission.submittedAt,
             status: submission.status,
-            score: submission.score
+            score: submission.score,
+            link: submission.link
           } : null
         };
       });
     } else if (userRole === 'teacher' || userRole === 'college_admin') {
       // Teachers see assignments they created
       // Admins see all assignments
-      const query = userRole === 'teacher' 
+      const query = userRole === 'teacher'
         ? { createdBy: userId }
         : {};
-        
+
       assignments = await Assignment.find(query)
         .populate('createdBy', 'username')
-        .populate('assignedTo', 'username email')
+        .populate('submissions.student', 'username email')
         .sort({ createdAt: -1 });
-        
+
       // Format for teacher/admin view
       assignments = assignments.map(assignment => ({
         id: assignment._id,
@@ -136,6 +141,15 @@ router.get('/', auth, async (req, res) => {
         createdBy: assignment.createdBy,
         assignedTo: assignment.assignedTo,
         submissionsCount: assignment.submissions.length,
+        submissions: assignment.submissions.map(sub => ({
+          student: sub.student?.username || 'Unknown',
+          studentId: sub.student?._id,
+          submittedAt: sub.submittedAt,
+          status: sub.status,
+          link: sub.link,
+          score: sub.score,
+          feedback: sub.feedback
+        })),
         createdAt: assignment.createdAt
       }));
     }
@@ -221,7 +235,7 @@ router.post('/', auth, async (req, res) => {
 router.post('/:id/submit', auth, async (req, res) => {
   try {
     const assignmentId = validateAndSanitize.objectId(req.params.id);
-    const { submissionText, fileData, fileName, fileType } = req.body;
+    const { link } = req.body;
     const userId = validateAndSanitize.objectId(req.user.userId);
 
     if (!assignmentId || !userId) {
@@ -240,9 +254,14 @@ router.post('/:id/submit', auth, async (req, res) => {
     }
 
     // Validate and sanitize inputs
-    const sanitizedSubmissionText = validateAndSanitize.string(submissionText, 5000);
-    const sanitizedFileName = validateAndSanitize.string(fileName, 255);
-    const sanitizedFileType = validateAndSanitize.string(fileType, 50);
+    const sanitizedLink = validateAndSanitize.string(link, 1000);
+
+    if (!sanitizedLink) {
+      return res.status(400).json({
+        success: false,
+        message: 'Submission link is required'
+      });
+    }
 
     // Find assignment
     const assignment = await Assignment.findById(assignmentId);
@@ -253,16 +272,27 @@ router.post('/:id/submit', auth, async (req, res) => {
       });
     }
 
-    // Check if student is assigned to this assignment
-    if (!assignment.assignedTo.includes(userId)) {
-      return res.status(403).json({
-        success: false,
-        message: 'You are not assigned to this assignment'
+    // Check if student is enrolled in the class (if classId exists)
+    if (assignment.classId) {
+      const Class = require('../models/Class');
+      const enrolledClass = await Class.findOne({
+        _id: assignment.classId,
+        students: userId
       });
+
+      if (!enrolledClass) {
+        return res.status(403).json({
+          success: false,
+          message: 'You are not enrolled in this class'
+        });
+      }
     }
 
-    // Check due date
-    if (new Date() > assignment.dueDate) {
+    // Check due date - allow submission until end of due date (11:59 PM)
+    const dueDateEndOfDay = new Date(assignment.dueDate);
+    dueDateEndOfDay.setHours(23, 59, 59, 999);
+
+    if (new Date() > dueDateEndOfDay) {
       return res.status(400).json({
         success: false,
         message: 'Assignment submission deadline has passed'
@@ -278,19 +308,9 @@ router.post('/:id/submit', auth, async (req, res) => {
     const submission = {
       student: userId,
       submittedAt: new Date(),
-      status: 'submitted'
+      status: 'submitted',
+      link: sanitizedLink
     };
-
-    if (sanitizedSubmissionText) {
-      submission.text = sanitizedSubmissionText;
-    }
-
-    if (fileData && sanitizedFileName && sanitizedFileType) {
-      // Validate file data (in a real implementation, you'd handle file upload properly)
-      submission.fileData = fileData;
-      submission.fileName = sanitizedFileName;
-      submission.fileType = sanitizedFileType;
-    }
 
     assignment.submissions.push(submission);
     await assignment.save();

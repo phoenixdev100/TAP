@@ -1,10 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import logger from "@/utils/logger";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -66,11 +68,19 @@ interface Assignment {
   gradedSubmissions?: number;
   pendingGrading?: number;
   teacher?: string;
+  submission?: {
+    submittedAt: string;
+    status: string;
+    score?: number;
+    link?: string;
+  };
   submissions?: Array<{
     student: string;
     studentId: string;
     submittedAt: string;
+    status: string;
     score?: number;
+    link?: string;
     fileData?: boolean;
     originalFileName?: string;
     fileType?: string;
@@ -96,6 +106,7 @@ const Assignments = () => {
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
   const [isGradeDialogOpen, setIsGradeDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isSubmissionsDialogOpen, setIsSubmissionsDialogOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
   const [assignmentToDelete, setAssignmentToDelete] = useState<Assignment | null>(null);
@@ -105,15 +116,10 @@ const Assignments = () => {
     dueDate: '',
     className: '',
     classId: '',
-    link: '',
-    assignedTo: [] as string[]
+    link: ''
   });
   const [submissionData, setSubmissionData] = useState({
-    submissionText: '',
-    file: null as File | null,
-    fileData: '',
-    fileName: '',
-    fileType: ''
+    link: ''
   });
   const [gradeData, setGradeData] = useState({
     score: '',
@@ -167,30 +173,6 @@ const Assignments = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          const base64String = event.target.result as string;
-          // Remove the data URL prefix to get pure base64
-          const pureBase64 = base64String.split(',')[1];
-          setSubmissionData(prev => ({
-            ...prev,
-            file: file,
-            fileData: pureBase64,
-            fileName: file.name,
-            fileType: file.type
-          }));
-        }
-      };
-
-      reader.readAsDataURL(file);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -215,8 +197,7 @@ const Assignments = () => {
           dueDate: '',
           className: '',
           classId: '',
-          link: '',
-          assignedTo: []
+          link: ''
         });
         fetchAssignments();
       } else {
@@ -314,10 +295,7 @@ const Assignments = () => {
       if (!selectedAssignment) return;
 
       const response = await api.post(`/api/assignments/${selectedAssignment.id}/submit`, {
-        submissionText: submissionData.submissionText,
-        fileData: submissionData.fileData,
-        fileName: submissionData.fileName,
-        fileType: submissionData.fileType
+        link: submissionData.link
       }) as any;
 
       if ((response.data as any).success) {
@@ -328,7 +306,7 @@ const Assignments = () => {
         });
         setIsSubmitDialogOpen(false);
         setSelectedAssignment(null);
-        setSubmissionData({ submissionText: '', file: null, fileData: '', fileName: '', fileType: '' });
+        setSubmissionData({ link: '' });
         fetchAssignments();
       } else {
         throw new Error((response.data as any).message || 'Failed to submit assignment');
@@ -419,16 +397,20 @@ const Assignments = () => {
       dueDate: assignment.dueDate,
       className: assignment.className,
       classId: matchedClass?._id || '',
-      link: assignment.link || '',
-      assignedTo: []
+      link: assignment.link || ''
     });
     setIsEditDialogOpen(true);
   };
 
   const openSubmitDialog = (assignment: Assignment) => {
     setSelectedAssignment(assignment);
-    setSubmissionData({ submissionText: '', file: null, fileData: '', fileName: '', fileType: '' });
+    setSubmissionData({ link: '' });
     setIsSubmitDialogOpen(true);
+  };
+
+  const openSubmissionsDialog = (assignment: Assignment) => {
+    setSelectedAssignment(assignment);
+    setIsSubmissionsDialogOpen(true);
   };
 
   const openGradeDialog = (assignment: Assignment, submission: any) => {
@@ -635,7 +617,10 @@ const Assignments = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
             >
-              <Card className="hover:shadow-lg transition-all duration-300 hover:scale-[1.01] backdrop-blur-sm bg-white/50 dark:bg-slate-800/50 border-2 dark:border-slate-700">
+              <Card
+                className={`hover:shadow-lg transition-all duration-300 hover:scale-[1.01] backdrop-blur-sm bg-white/50 dark:bg-slate-800/50 border-2 dark:border-slate-700 cursor-pointer ${user?.role !== 'student' ? 'hover:border-purple-500' : ''}`}
+                onClick={() => user?.role !== 'student' && openSubmissionsDialog(assignment)}
+              >
               <CardHeader className="py-3">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -650,6 +635,17 @@ const Assignments = () => {
                         Overdue
                       </span>
                     )}
+                    {assignment.status === 'completed' && assignment.submission?.link && (
+                      <a
+                        href={assignment.submission.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-xs text-primary hover:underline whitespace-nowrap"
+                      >
+                        <Link className="h-3 w-3" />
+                        Your Submission
+                      </a>
+                    )}
                     {assignment.link && (
                       <a
                         href={assignment.link}
@@ -658,7 +654,7 @@ const Assignments = () => {
                         className="flex items-center gap-1 text-xs text-primary hover:underline whitespace-nowrap"
                       >
                         <Link className="h-3 w-3" />
-                        Link
+                        Assignment Link
                       </a>
                     )}
                     <span className="text-xs text-muted-foreground hidden sm:inline">{assignment.description}</span>
@@ -669,30 +665,21 @@ const Assignments = () => {
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {user?.role === 'student' ? (
-                      <>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => openSubmitDialog(assignment)}
-                          disabled={assignment.status === 'completed'}
-                          className="h-8 w-8"
-                        >
-                          <Upload className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={(e) => { e.stopPropagation(); openSubmitDialog(assignment); }}
+                        disabled={assignment.status === 'completed'}
+                        className="h-8 w-8"
+                      >
+                        <Upload className="h-4 w-4" />
+                      </Button>
                     ) : (
                       <>
                         <Button
                           variant="outline"
                           size="icon"
-                          onClick={() => openEditDialog(assignment)}
+                          onClick={(e) => { e.stopPropagation(); openEditDialog(assignment); }}
                           className="h-8 w-8"
                         >
                           <Edit className="h-4 w-4" />
@@ -700,7 +687,7 @@ const Assignments = () => {
                         <Button
                           variant="destructive"
                           size="icon"
-                          onClick={() => handleDelete(assignment.id)}
+                          onClick={(e) => { e.stopPropagation(); handleDelete(assignment.id); }}
                           className="h-8 w-8"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -710,68 +697,6 @@ const Assignments = () => {
                   </div>
                 </div>
               </CardHeader>
-              {user?.role !== 'student' && assignment.submissions && assignment.submissions.length > 0 && (
-                <CardContent className="border-t dark:border-slate-600">
-                  <h4 className="font-semibold mb-3">Submissions ({assignment.submissions.length})</h4>
-                  <div className="space-y-2">
-                    {assignment.submissions.map((submission, index) => (
-                      <motion.div
-                        key={index}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        className="flex items-center justify-between p-3 bg-muted/50 dark:bg-slate-700/50 rounded-lg hover:bg-muted dark:hover:bg-slate-700 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{submission.student}</span>
-                          <span className="text-sm text-muted-foreground">
-                            Submitted: {format(new Date(submission.submittedAt), 'MMM dd, yyyy')}
-                          </span>
-                          {submission.fileData && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => downloadFile(assignment.id, submission.studentId, submission.originalFileName || 'file')}
-                              className="flex items-center gap-1"
-                            >
-                              <Download className="h-3 w-3" />
-                              File
-                            </Button>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {submission.score !== undefined ? (
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-green-600">{submission.score}/100</span>
-                              {submission.feedback && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="flex items-center gap-1"
-                                >
-                                  <MessageSquare className="h-3 w-3" />
-                                  Feedback
-                                </Button>
-                              )}
-                            </div>
-                          ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openGradeDialog(assignment, submission)}
-                              className="flex items-center gap-1"
-                            >
-                              <Star className="h-3 w-3" />
-                              Grade
-                            </Button>
-                          )}
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                </CardContent>
-              )}
               </Card>
             </motion.div>
           ))
@@ -855,24 +780,18 @@ const Assignments = () => {
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmission} className="space-y-4">
-            <Textarea
-              placeholder="Write your submission text here (optional)"
-              name="submissionText"
-              value={submissionData.submissionText}
-              onChange={(e) => setSubmissionData(prev => ({ ...prev, submissionText: e.target.value }))}
-              rows={4}
-              className="border-2 focus:ring-2 focus:ring-purple-500"
-            />
             <div className="space-y-2">
-              <label className="text-sm font-medium">Upload File (optional)</label>
+              <Label className="text-sm font-medium">Submission Link</Label>
               <Input
-                type="file"
-                onChange={handleFileChange}
-                accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt,.zip"
+                placeholder="Paste your submission link here (e.g., Google Drive, GitHub, etc.)"
+                name="link"
+                value={submissionData.link}
+                onChange={(e) => setSubmissionData(prev => ({ ...prev, link: e.target.value }))}
+                required
                 className="border-2 focus:ring-2 focus:ring-purple-500"
               />
               <p className="text-xs text-muted-foreground">
-                Supported formats: Images, PDFs, Documents, ZIP (Max 10MB)
+                Provide a link to your assignment submission
               </p>
             </div>
             <Button type="submit" disabled={isLoading} className="w-full bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600">
@@ -939,6 +858,97 @@ const Assignments = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Submissions Dialog */}
+      <Dialog open={isSubmissionsDialogOpen} onOpenChange={setIsSubmissionsDialogOpen}>
+        <DialogContent className="sm:max-w-[800px] border-0 shadow-2xl bg-gradient-to-b from-background to-background/95 backdrop-blur-xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+              Submissions - {selectedAssignment?.title}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedAssignment?.submissions && selectedAssignment.submissions.length > 0 ? (
+            <div className="w-full overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Student</TableHead>
+                    <TableHead>Submitted Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Submission Link</TableHead>
+                    <TableHead>Score</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {selectedAssignment.submissions.map((submission, index) => (
+                    <TableRow key={index}>
+                      <TableCell className="font-medium">{submission.student}</TableCell>
+                      <TableCell>{format(new Date(submission.submittedAt), 'MMM dd, yyyy')}</TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          submission.status === 'submitted' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {submission.status}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {submission.link ? (
+                          <a
+                            href={submission.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-primary hover:underline"
+                          >
+                            <Link className="h-3 w-3" />
+                            View
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground">No link</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {submission.score !== undefined ? (
+                          <span className="font-semibold text-green-600">{submission.score}/100</span>
+                        ) : (
+                          <span className="text-muted-foreground">Not graded</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {submission.score !== undefined ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openGradeDialog(selectedAssignment, submission)}
+                            className="flex items-center gap-1"
+                          >
+                            <MessageSquare className="h-3 w-3" />
+                            {submission.feedback ? 'View Feedback' : 'Add Feedback'}
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openGradeDialog(selectedAssignment, submission)}
+                            className="flex items-center gap-1"
+                          >
+                            <Star className="h-3 w-3" />
+                            Grade
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No submissions yet</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

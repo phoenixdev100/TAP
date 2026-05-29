@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarDays, BookOpen, ListTodo, FileText, UserCheck, Bell, BarChart2, LogOut, User, Sparkles, Moon, Sun } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CalendarDays, BookOpen, ListTodo, FileText, UserCheck, Bell, BarChart2, LogOut, User, Sparkles, Moon, Sun, ArrowLeft, GraduationCap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
@@ -8,8 +9,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import api from '@/api/axios';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend } from "recharts";
+import logger from '@/utils/logger';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -75,7 +75,9 @@ const StudentDashboard = () => {
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [academicStats, setAcademicStats] = useState({
     attendanceRate: 0,
-    assignmentCompletion: 0
+    assignmentCompletion: 0,
+    gpa: 0,
+    totalCourses: 0
   });
 
   useEffect(() => {
@@ -151,16 +153,29 @@ const StudentDashboard = () => {
       const attendanceData = (attendanceResponse.data as any)?.data || {};
       const assignmentData = (assignmentsResponse.data as any)?.data || {};
 
+      // Fetch profile data for GPA
+      let gpa = 0;
+      try {
+        const profileResponse = await api.get('/api/users/profile');
+        gpa = (profileResponse.data as any)?.profile?.gpa || 0;
+      } catch (e) {
+        logger.error('Error fetching GPA:', e);
+      }
+
       return {
         attendanceRate: attendanceData.attendancePercentage || 0,
-        assignmentCompletion: assignmentData.submissionRate || 0
+        assignmentCompletion: assignmentData.submissionRate || 0,
+        gpa: gpa,
+        totalCourses: schedules.length
       };
     } catch (error) {
       logger.error('Error fetching academic stats:', error);
       // Fallback to zero values if backend endpoints don't exist
       return {
         attendanceRate: 0,
-        assignmentCompletion: 0
+        assignmentCompletion: 0,
+        gpa: 0,
+        totalCourses: schedules.length
       };
     }
   };
@@ -171,175 +186,191 @@ const StudentDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-blue-50 dark:to-slate-900">
-      <header className="w-full px-4 sm:px-6 md:px-8 lg:px-12 py-4 md:py-6">
-        <div className="w-full flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate('/student-dashboard')}
-              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-            >
-              <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 lg:h-8 lg:w-8 text-primary" />
-            </button>
-            <div className="text-xl md:text-2xl font-bold">
-              Welcome, <span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">{user?.username || 'Student'}</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={toggleTheme}
-              className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-full hover:bg-primary/20 transition-colors"
-              title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
-            >
-              {theme === 'light' ? <Moon className="h-4 w-4 text-primary" /> : <Sun className="h-4 w-4 text-primary" />}
-            </button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-full hover:bg-primary/20 transition-colors">
-                  <User className="h-4 w-4 text-primary" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{user?.username || 'User'}</p>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      {user?.email || 'user@example.com'}
-                    </p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/profile')}>
-                  <User className="mr-2 h-4 w-4" />
-                  <span>View Profile</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Logout</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      </header>
-
-      <main className="w-full px-4 sm:px-6 md:px-8 lg:px-12 py-6 md:py-8 lg:py-12">
-        <div className="space-y-6 max-w-full">
+    <div className="min-h-screen w-full flex flex-col pb-10 sm:pb-0 space-y-6 px-6 py-8 md:px-10 md:py-12">
+      {/* Header Section */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+      >
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/student-dashboard')}>
+            <Sparkles className="h-5 w-5" />
+          </Button>
           <div>
-            <h2 className="text-xl text-muted-foreground mb-4">
-              Here's an overview of your academic progress and upcoming activities.
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
+              Student Dashboard
             </h2>
-          </div>
-
-          <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-            <Card className="col-span-1 md:col-span-2 lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Bell className="h-5 w-5 text-primary" />
-                  Upcoming Classes
-                </CardTitle>
-                <CardDescription>Your upcoming classes for today and tomorrow</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="space-y-4">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-muted animate-pulse"></div>
-                          <div>
-                            <div className="h-4 w-32 bg-muted rounded animate-pulse mb-1"></div>
-                            <div className="h-3 w-24 bg-muted rounded animate-pulse"></div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : upcomingEvents.length > 0 ? (
-                  <div className="space-y-4">
-                    {upcomingEvents.map((event, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-full bg-blue-100 text-blue-500 dark:bg-blue-900 dark:text-blue-400">
-                            <CalendarDays className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <h4 className="font-medium">{event.title}</h4>
-                            <p className="text-sm text-muted-foreground">{event.time} • {event.date}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <CalendarDays className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p>No upcoming classes</p>
-                    <p className="text-sm">Your schedule will appear here once classes are added</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart2 className="h-5 w-5 text-primary" />
-                  Your Progress
-                </CardTitle>
-                <CardDescription>Your academic performance</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-sm font-medium">Attendance Rate</span>
-                    <span className="text-sm text-muted-foreground">{academicStats.attendanceRate}%</span>
-                  </div>
-                  <Progress value={academicStats.attendanceRate} className="h-2" />
-                </div>
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-sm font-medium">Assignment Completion</span>
-                    <span className="text-sm text-muted-foreground">{academicStats.assignmentCompletion}%</span>
-                  </div>
-                  <Progress value={academicStats.assignmentCompletion} className="h-2" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div>
-            <h3 className="text-xl font-semibold mb-4">Quick Access</h3>
-            <motion.div
-              className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
-              variants={container}
-              initial="hidden"
-              animate="show"
-            >
-              {features.map((feature, i) => (
-                <motion.div key={i} variants={item}>
-                  <Card
-                    className={`cursor-pointer hover:shadow-md transition-all duration-300 bg-gradient-to-br ${feature.color} border-none overflow-hidden relative h-full`}
-                    onClick={() => navigate(feature.path)}
-                  >
-                    <div className="absolute -right-8 -top-8 w-24 h-24 rounded-full bg-white/20 dark:bg-white/10 blur-2xl"></div>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-lg font-medium">{feature.title}</CardTitle>
-                      <div className="rounded-full p-2 bg-white/50 dark:bg-black/30 backdrop-blur-sm">
-                        {feature.icon}
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <CardDescription className="text-black/60 dark:text-white/70">{feature.description}</CardDescription>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </motion.div>
+            <p className="text-muted-foreground dark:text-gray-400 text-sm sm:text-base">
+              Welcome back, {user?.username || 'Student'}
+            </p>
           </div>
         </div>
-      </main>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleTheme}
+            className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-full hover:bg-primary/20 transition-colors"
+            title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+          >
+            {theme === 'light' ? <Moon className="h-4 w-4 text-primary" /> : <Sun className="h-4 w-4 text-primary" />}
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-full hover:bg-primary/20 transition-colors">
+                <User className="h-4 w-4 text-primary" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{user?.username || 'User'}</p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {user?.email || 'user@example.com'}
+                  </p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate('/profile')}>
+                <User className="mr-2 h-4 w-4" />
+                <span>View Profile</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Logout</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </motion.div>
+
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Attendance Rate</CardTitle>
+            <UserCheck className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{academicStats.attendanceRate}%</div>
+            <p className="text-xs text-muted-foreground">Overall attendance</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Assignment Completion</CardTitle>
+            <ListTodo className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{academicStats.assignmentCompletion}%</div>
+            <p className="text-xs text-muted-foreground">Assignments submitted</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">GPA</CardTitle>
+            <GraduationCap className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{academicStats.gpa}</div>
+            <p className="text-xs text-muted-foreground">Current GPA</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Courses</CardTitle>
+            <BookOpen className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{academicStats.totalCourses}</div>
+            <p className="text-xs text-muted-foreground">Enrolled courses</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div>
+        <h3 className="text-xl font-semibold mb-4">Quick Access</h3>
+        <motion.div
+          className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+          variants={container}
+          initial="hidden"
+          animate="show"
+        >
+          {features.map((feature, i) => (
+            <motion.div key={i} variants={item}>
+              <Card
+                className={`cursor-pointer hover:shadow-md transition-all duration-300 bg-gradient-to-br ${feature.color} border-none overflow-hidden relative h-full`}
+                onClick={() => navigate(feature.path)}
+              >
+                <div className="absolute -right-8 -top-8 w-24 h-24 rounded-full bg-white/20 dark:bg-white/10 blur-2xl"></div>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-lg font-medium">{feature.title}</CardTitle>
+                  <div className="rounded-full p-2 bg-white/50 dark:bg-black/30 backdrop-blur-sm">
+                    {feature.icon}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription className="text-black/60 dark:text-white/70">{feature.description}</CardDescription>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="col-span-full lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5 text-primary" />
+              Upcoming Classes
+            </CardTitle>
+            <CardDescription>Your upcoming classes for today and tomorrow</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-muted animate-pulse"></div>
+                      <div>
+                        <div className="h-4 w-32 bg-muted rounded animate-pulse mb-1"></div>
+                        <div className="h-3 w-24 bg-muted rounded animate-pulse"></div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : upcomingEvents.length > 0 ? (
+              <div className="space-y-4">
+                {upcomingEvents.map((event, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-full bg-blue-100 text-blue-500 dark:bg-blue-900 dark:text-blue-400">
+                        <CalendarDays className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium">{event.title}</h4>
+                        <p className="text-sm text-muted-foreground">{event.time} • {event.date}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <CalendarDays className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p>No upcoming classes</p>
+                <p className="text-sm">Your schedule will appear here once classes are added</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

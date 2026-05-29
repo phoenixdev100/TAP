@@ -46,6 +46,15 @@ const assignmentSchema = new mongoose.Schema({
       type: Date,
       default: Date.now
     },
+    status: {
+      type: String,
+      enum: ['submitted', 'graded'],
+      default: 'submitted'
+    },
+    link: {
+      type: String,
+      required: false
+    },
     content: {
       type: String,
       required: false

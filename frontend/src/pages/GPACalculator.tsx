@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
-import { Plus, Trash2, Calculator, GraduationCap, BookOpen, Award, History, Info } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Plus, Trash2, Calculator, GraduationCap, BookOpen, Award, History, Info, ArrowLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 import {
   Select,
   SelectContent,
@@ -27,6 +28,7 @@ interface Course {
 }
 
 const GPACalculator = () => {
+  const navigate = useNavigate();
   const [courses, setCourses] = useState<Course[]>([
     { id: 1, name: "", credits: "", grade: "" },
   ]);
@@ -157,19 +159,26 @@ const GPACalculator = () => {
   };
 
   return (
-    <div className="w-full p-4 space-y-6">
+    <div className="min-h-screen w-full flex flex-col pb-10 sm:pb-0 space-y-6 px-6 py-8 md:px-10 md:py-12">
+      {/* Header Section */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="space-y-2"
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
       >
-        <div className="flex items-center gap-2">
-          <GraduationCap className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold">GPA Calculator</h1>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/student-dashboard')}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
+              GPA Calculator
+            </h2>
+            <p className="text-muted-foreground dark:text-gray-400 text-sm sm:text-base">
+              Calculate your GPA using the 10-point grading system
+            </p>
+          </div>
         </div>
-        <p className="text-muted-foreground">
-          Calculate your GPA using the 10-point grading system
-        </p>
       </motion.div>
 
       <Tabs defaultValue="calculator" className="space-y-6">
@@ -185,8 +194,15 @@ const GPACalculator = () => {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
           >
-            <Card className="p-6">
-              <div className="space-y-6">
+            <Card className="backdrop-blur-sm bg-white/50 dark:bg-slate-800/50 border-2 dark:border-slate-700">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calculator className="h-5 w-5 text-primary" />
+                  Course Details
+                </CardTitle>
+                <CardDescription className="dark:text-gray-400">Add your courses and grades to calculate GPA</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
                 <AnimatePresence mode="popLayout">
                   {courses.map((course) => (
                     <motion.div
@@ -204,7 +220,7 @@ const GPACalculator = () => {
                           onChange={(e) =>
                             updateCourse(course.id, "name", e.target.value)
                           }
-                          className="border-primary/20 focus:border-primary"
+                          className="border-2 focus:ring-2 focus:ring-purple-500 dark:bg-slate-700/50 dark:border-slate-600"
                         />
                       </div>
                       <div className="col-span-2">
@@ -217,7 +233,7 @@ const GPACalculator = () => {
                           onChange={(e) =>
                             updateCourse(course.id, "credits", e.target.value)
                           }
-                          className="border-primary/20 focus:border-primary"
+                          className="border-2 focus:ring-2 focus:ring-purple-500 dark:bg-slate-700/50 dark:border-slate-600"
                         />
                       </div>
                       <div className="col-span-3">
@@ -227,7 +243,7 @@ const GPACalculator = () => {
                             updateCourse(course.id, "grade", value)
                           }
                         >
-                          <SelectTrigger className="border-primary/20 focus:border-primary">
+                          <SelectTrigger className="border-2 focus:ring-2 focus:ring-purple-500 dark:bg-slate-700/50 dark:border-slate-600">
                             <SelectValue placeholder="Grade" />
                           </SelectTrigger>
                           <SelectContent>
@@ -265,14 +281,14 @@ const GPACalculator = () => {
 
                   <Button
                     onClick={calculateGPA}
-                    className="w-full"
+                    className="w-full bg-gradient-to-r from-[#7C3AED] to-[#A855F7] hover:from-[#6D28D9] hover:to-[#9333EA] text-white shadow-lg transition-all duration-300"
                     size="lg"
                   >
                     <Calculator className="h-4 w-4 mr-2" />
                     Calculate GPA
                   </Button>
                 </div>
-              </div>
+              </CardContent>
             </Card>
           </motion.div>
 
@@ -282,42 +298,52 @@ const GPACalculator = () => {
               animate={{ opacity: 1, y: 0 }}
               className="grid gap-4 md:grid-cols-3"
             >
-              <Card className="p-6 text-center">
-                <BookOpen className="h-8 w-8 mx-auto mb-2 text-primary" />
-                <p className="text-sm font-medium text-muted-foreground">Total Courses</p>
-                <p className="text-2xl font-bold">{courses.length}</p>
+              <Card className="backdrop-blur-sm bg-white/50 dark:bg-slate-800/50 border-2 dark:border-slate-700">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Courses</CardTitle>
+                  <BookOpen className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{courses.length}</div>
+                </CardContent>
               </Card>
 
-              <Card className="p-6 text-center">
-                <Award className="h-8 w-8 mx-auto mb-2 text-primary" />
-                <p className="text-sm font-medium text-muted-foreground">Total Credits</p>
-                <p className="text-2xl font-bold">{totalCredits}</p>
+              <Card className="backdrop-blur-sm bg-white/50 dark:bg-slate-800/50 border-2 dark:border-slate-700">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Credits</CardTitle>
+                  <Award className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{totalCredits}</div>
+                </CardContent>
               </Card>
 
-              <Card className="p-6 text-center relative overflow-hidden">
-                <div className="relative z-10">
-                  <p className="text-sm font-medium text-muted-foreground">Your GPA</p>
-                  <p className={`text-4xl font-bold ${getGPAColor(gpa)}`}>{gpa}</p>
-                  <p className="text-sm text-muted-foreground mt-1">{getGradeDescription(gpa)}</p>
-                </div>
-                <div 
-                  className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" 
-                  style={{
-                    clipPath: `polygon(0 ${100 - (gpa / 10) * 100}%, 100% 100%, 0 100%)`
-                  }}
-                />
+              <Card className="backdrop-blur-sm bg-white/50 dark:bg-slate-800/50 border-2 dark:border-slate-700 relative overflow-hidden">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Your GPA</CardTitle>
+                  <GraduationCap className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="relative z-10">
+                    <p className={`text-4xl font-bold ${getGPAColor(gpa)}`}>{gpa}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{getGradeDescription(gpa)}</p>
+                  </div>
+                </CardContent>
               </Card>
             </motion.div>
           )}
         </TabsContent>
 
         <TabsContent value="history">
-          <Card className="p-6">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
+          <Card className="backdrop-blur-sm bg-white/50 dark:bg-slate-800/50 border-2 dark:border-slate-700">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
                 <History className="h-5 w-5 text-primary" />
-                <h2 className="text-lg font-semibold">Calculation History</h2>
-              </div>
+                Calculation History
+              </CardTitle>
+              <CardDescription className="dark:text-gray-400">Your recent GPA calculations</CardDescription>
+            </CardHeader>
+            <CardContent>
               {savedCalculations.length === 0 ? (
                 <p className="text-muted-foreground text-center py-4">No calculation history yet</p>
               ) : (
@@ -340,17 +366,20 @@ const GPACalculator = () => {
                   ))}
                 </div>
               )}
-            </div>
+            </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="guide">
-          <Card className="p-6">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
+          <Card className="backdrop-blur-sm bg-white/50 dark:bg-slate-800/50 border-2 dark:border-slate-700">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
                 <Info className="h-5 w-5 text-primary" />
-                <h2 className="text-lg font-semibold">Grading Guide</h2>
-              </div>
+                Grading Guide
+              </CardTitle>
+              <CardDescription className="dark:text-gray-400">10-point grading system reference</CardDescription>
+            </CardHeader>
+            <CardContent>
               <div className="grid gap-4 md:grid-cols-2">
                 {Object.entries(gradePoints).map(([grade, points]) => (
                   <div
@@ -367,7 +396,7 @@ const GPACalculator = () => {
                   </div>
                 ))}
               </div>
-            </div>
+            </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
