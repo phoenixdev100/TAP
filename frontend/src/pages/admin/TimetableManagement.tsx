@@ -12,7 +12,7 @@ import { CalendarDays, Plus, Edit, Trash2, Clock, MapPin, ArrowLeft } from "luci
 import api from '@/api/axios';
 
 interface Schedule {
-  _id: string;
+  id: string;
   className: string;
   professor: string;
   dayOfWeek: string;
@@ -29,18 +29,28 @@ interface Class {
   code: string;
 }
 
+interface Teacher {
+  _id: string;
+  username: string;
+  email: string;
+}
+
 const TimetableManagement = () => {
   const navigate = useNavigate();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
+  const [scheduleToDelete, setScheduleToDelete] = useState<Schedule | null>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
     classId: '',
     className: '',
+    teacherId: '',
     professor: '',
     dayOfWeek: 'Monday',
     startTime: '',
@@ -55,12 +65,13 @@ const TimetableManagement = () => {
   useEffect(() => {
     fetchSchedules();
     fetchClasses();
+    fetchTeachers();
   }, []);
 
   const fetchSchedules = async () => {
     try {
       const response = await api.get('/api/schedule');
-      setSchedules((response.data as any)?.data || []);
+      setSchedules((response.data as any)?.schedules || []);
     } catch (error) {
       toast({
         title: "Error",
@@ -81,11 +92,20 @@ const TimetableManagement = () => {
     }
   };
 
+  const fetchTeachers = async () => {
+    try {
+      const response = await api.get('/api/users?role=teacher');
+      setTeachers((response.data as any)?.data || []);
+    } catch (error) {
+      console.error('Failed to fetch teachers:', error);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       if (editingSchedule) {
-        await api.put(`/api/schedule/${editingSchedule._id}`, formData);
+        await api.put(`/api/schedule/${editingSchedule.id}`, formData);
         toast({
           title: "Success",
           description: "Schedule updated successfully"
@@ -114,6 +134,7 @@ const TimetableManagement = () => {
     setFormData({
       classId: schedule.classId || '',
       className: schedule.className,
+      teacherId: '',
       professor: schedule.professor,
       dayOfWeek: schedule.dayOfWeek,
       startTime: schedule.startTime,
@@ -124,23 +145,39 @@ const TimetableManagement = () => {
     setDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this schedule?')) {
-      try {
-        await api.delete(`/api/schedule/${id}`);
-        toast({
-          title: "Success",
-          description: "Schedule deleted successfully"
-        });
-        fetchSchedules();
-      } catch (error: any) {
-        toast({
-          title: "Error",
-          description: error.response?.data?.message || "Failed to delete schedule",
-          variant: "destructive"
-        });
-      }
+  const handleDelete = async () => {
+    if (!scheduleToDelete) return;
+
+    try {
+      await api.delete(`/api/schedule/${scheduleToDelete.id}`);
+      toast({
+        title: "Success",
+        description: "Schedule deleted successfully"
+      });
+      setDeleteDialogOpen(false);
+      setScheduleToDelete(null);
+      fetchSchedules();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to delete schedule",
+        variant: "destructive"
+      });
     }
+  };
+
+  const confirmDelete = (schedule: Schedule) => {
+    setScheduleToDelete(schedule);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleTeacherChange = (teacherId: string) => {
+    const selectedTeacher = teachers.find(t => t._id === teacherId);
+    setFormData({
+      ...formData,
+      teacherId,
+      professor: selectedTeacher ? selectedTeacher.username : ''
+    });
   };
 
   const handleClassChange = (classId: string) => {
@@ -156,6 +193,7 @@ const TimetableManagement = () => {
     setFormData({
       classId: '',
       className: '',
+      teacherId: '',
       professor: '',
       dayOfWeek: 'Monday',
       startTime: '',
@@ -217,20 +255,26 @@ const TimetableManagement = () => {
                   </Select>
                 </div>
                 <div className="grid gap-2">
+                  <Label htmlFor="teacher">Assign to Teacher</Label>
+                  <Select value={formData.teacherId} onValueChange={handleTeacherChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a teacher" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {teachers.map((teacher) => (
+                        <SelectItem key={teacher._id} value={teacher._id}>
+                          {teacher.username}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
                   <Label htmlFor="className">Class Name</Label>
                   <Input
                     id="className"
                     value={formData.className}
                     onChange={(e) => setFormData({ ...formData, className: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="professor">Professor/Teacher</Label>
-                  <Input
-                    id="professor"
-                    value={formData.professor}
-                    onChange={(e) => setFormData({ ...formData, professor: e.target.value })}
                     required
                   />
                 </div>
@@ -307,51 +351,72 @@ const TimetableManagement = () => {
           <CardDescription>Manage your institution's timetables</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Class</TableHead>
-                <TableHead>Professor</TableHead>
-                <TableHead>Day</TableHead>
-                <TableHead>Time</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {schedules.map((schedule) => (
-                <TableRow key={schedule._id}>
-                  <TableCell className="font-medium">{schedule.className}</TableCell>
-                  <TableCell>{schedule.professor}</TableCell>
-                  <TableCell>{schedule.dayOfWeek}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      {schedule.startTime} - {schedule.endTime}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <MapPin className="h-4 w-4" />
-                      {schedule.location}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(schedule)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(schedule._id)}>
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          <div className="w-full overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[20%]">Class</TableHead>
+                  <TableHead className="w-[15%]">Professor</TableHead>
+                  <TableHead className="w-[10%]">Day</TableHead>
+                  <TableHead className="w-[20%]">Time</TableHead>
+                  <TableHead className="w-[20%]">Location</TableHead>
+                  <TableHead className="w-[15%] text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {schedules.map((schedule) => (
+                  <TableRow key={schedule.id}>
+                    <TableCell className="font-medium w-[20%]">{schedule.className}</TableCell>
+                    <TableCell className="w-[15%]">{schedule.professor}</TableCell>
+                    <TableCell className="w-[10%]">{schedule.dayOfWeek}</TableCell>
+                    <TableCell className="w-[20%]">
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        {schedule.startTime} - {schedule.endTime}
+                      </div>
+                    </TableCell>
+                    <TableCell className="w-[20%]">
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-4 w-4" />
+                        {schedule.location}
+                      </div>
+                    </TableCell>
+                    <TableCell className="w-[15%] text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(schedule)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => confirmDelete(schedule)}>
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Schedule</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this schedule for {scheduleToDelete?.className}? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -12,34 +12,34 @@ const validateAndSanitize = {
     if (typeof input !== 'string') return '';
     return input.trim().substring(0, maxLength);
   },
-  
+
   // Validate and sanitize ObjectId
   objectId: (input) => {
     if (!mongoose.Types.ObjectId.isValid(input)) return null;
     return input;
   },
-  
+
   // Validate time format (HH:MM)
   time: (input) => {
     const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
     const sanitized = validateAndSanitize.string(input, 5);
     return timeRegex.test(sanitized) ? sanitized : null;
   },
-  
+
   // Validate day of week
   dayOfWeek: (input) => {
     const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     const sanitized = validateAndSanitize.string(input, 10);
     return validDays.includes(sanitized) ? sanitized : null;
   },
-  
+
   // Validate color format (hex color)
   color: (input) => {
     const colorRegex = /^#[0-9A-Fa-f]{6}$/;
     const sanitized = validateAndSanitize.string(input, 7);
     return colorRegex.test(sanitized) ? sanitized : '#7C3AED';
   },
-  
+
   // Validate role
   role: (input) => {
     const validRoles = ['student', 'teacher', 'college_admin'];
@@ -52,16 +52,16 @@ router.get('/', auth, async (req, res) => {
   try {
     const userRole = validateAndSanitize.role(req.user.role);
     const userId = validateAndSanitize.objectId(req.user.userId);
-    
+
     if (!userId) {
       return res.status(400).json({
         success: false,
         message: 'Invalid user ID'
       });
     }
-    
+
     let schedules;
-    
+
     if (userRole === 'student') {
       // Students can see all schedules (created by teachers/admins)
       schedules = await Schedule.find({})
@@ -78,7 +78,7 @@ router.get('/', auth, async (req, res) => {
         .populate('userId', 'username role')
         .sort({ dayOfWeek: 1, startTime: 1 });
     }
-    
+
     // Sanitize schedule data before sending
     const sanitizedSchedules = schedules.map(schedule => ({
       id: schedule._id,
@@ -93,7 +93,7 @@ router.get('/', auth, async (req, res) => {
       createdAt: schedule.createdAt,
       updatedAt: schedule.updatedAt
     }));
-    
+
     res.json({
       success: true,
       schedules: sanitizedSchedules
@@ -132,8 +132,8 @@ router.post('/', auth, async (req, res) => {
     const sanitizedColor = validateAndSanitize.color(color);
 
     // Validate required fields
-    if (!sanitizedClassId || !sanitizedClassName || !sanitizedProfessor || !sanitizedDayOfWeek || 
-        !sanitizedStartTime || !sanitizedEndTime || !sanitizedLocation || !userId) {
+    if (!sanitizedClassName || !sanitizedProfessor || !sanitizedDayOfWeek ||
+      !sanitizedStartTime || !sanitizedEndTime || !sanitizedLocation || !userId) {
       return res.status(400).json({
         success: false,
         message: 'All required fields must be provided and valid'
@@ -143,7 +143,7 @@ router.post('/', auth, async (req, res) => {
     // Validate time logic (end time should be after start time)
     const startMinutes = parseInt(sanitizedStartTime.split(':')[0]) * 60 + parseInt(sanitizedStartTime.split(':')[1]);
     const endMinutes = parseInt(sanitizedEndTime.split(':')[0]) * 60 + parseInt(sanitizedEndTime.split(':')[1]);
-    
+
     if (endMinutes <= startMinutes) {
       return res.status(400).json({
         success: false,
@@ -251,7 +251,7 @@ router.put('/:id', auth, async (req, res) => {
     // Validate time logic
     const startMinutes = parseInt(sanitizedStartTime.split(':')[0]) * 60 + parseInt(sanitizedStartTime.split(':')[1]);
     const endMinutes = parseInt(sanitizedEndTime.split(':')[0]) * 60 + parseInt(sanitizedEndTime.split(':')[1]);
-    
+
     if (endMinutes <= startMinutes) {
       return res.status(400).json({
         success: false,
@@ -453,7 +453,7 @@ router.get('/day/:dayOfWeek', auth, async (req, res) => {
         .sort({ startTime: 1 });
     } else {
       // Teachers see their own schedules for the day
-      schedules = await Schedule.find({ 
+      schedules = await Schedule.find({
         userId: userId,
         dayOfWeek: dayOfWeek
       })

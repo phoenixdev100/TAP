@@ -36,8 +36,10 @@ const StudentManagement = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -113,7 +115,7 @@ const StudentManagement = () => {
     if (!selectedStudent || !assignFormData.classId) return;
 
     try {
-      await api.post(`/api/classes/${assignFormData.classId}/students`, {
+      await api.post(`/api/classes/${assignFormData.classId}/enroll`, {
         studentId: selectedStudent._id
       });
       toast({
@@ -143,23 +145,30 @@ const StudentManagement = () => {
     setDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this student?')) {
-      try {
-        await api.delete(`/api/users/${id}`);
-        toast({
-          title: "Success",
-          description: "Student deleted successfully"
-        });
-        fetchStudents();
-      } catch (error: any) {
-        toast({
-          title: "Error",
-          description: error.response?.data?.message || "Failed to delete student",
-          variant: "destructive"
-        });
-      }
+  const handleDelete = async () => {
+    if (!studentToDelete) return;
+
+    try {
+      await api.delete(`/api/users/${studentToDelete._id}`);
+      toast({
+        title: "Success",
+        description: "Student deleted successfully"
+      });
+      setDeleteDialogOpen(false);
+      setStudentToDelete(null);
+      fetchStudents();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to delete student",
+        variant: "destructive"
+      });
     }
+  };
+
+  const confirmDelete = (student: Student) => {
+    setStudentToDelete(student);
+    setDeleteDialogOpen(true);
   };
 
   const handleRemoveClass = async (studentId: string, classId: string) => {
@@ -270,94 +279,115 @@ const StudentManagement = () => {
           <CardDescription>Manage your institution's students</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Enrolled Classes</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {students.map((student) => (
-                <TableRow key={student._id}>
-                  <TableCell className="font-medium">{student.username}</TableCell>
-                  <TableCell>{student.email}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {student.enrolledClasses?.length > 0 ? (
-                        student.enrolledClasses.map((cls) => (
-                          <span key={cls._id} className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs flex items-center gap-1">
-                            {cls.code}
-                            <button
-                              onClick={() => handleRemoveClass(student._id, cls._id)}
-                              className="hover:text-red-600"
-                            >
-                              ×
-                            </button>
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-muted-foreground text-sm">Not enrolled</span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Dialog open={assignDialogOpen && selectedStudent?._id === student._id} onOpenChange={(open) => {
-                        setAssignDialogOpen(open);
-                        if (open) setSelectedStudent(student);
-                        else setSelectedStudent(null);
-                      }}>
-                        <DialogTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <BookOpen className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Enroll {student.username} in Class</DialogTitle>
-                            <DialogDescription>Select a class to enroll this student</DialogDescription>
-                          </DialogHeader>
-                          <form onSubmit={handleAssignClass}>
-                            <div className="grid gap-4 py-4">
-                              <div className="grid gap-2">
-                                <Label htmlFor="class">Select Class</Label>
-                                <Select value={assignFormData.classId} onValueChange={(value) => setAssignFormData({ classId: value })}>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select a class" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {classes.map((cls) => (
-                                      <SelectItem key={cls._id} value={cls._id}>
-                                        {cls.code} - {cls.name}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                            <DialogFooter>
-                              <Button type="submit">Enroll Student</Button>
-                            </DialogFooter>
-                          </form>
-                        </DialogContent>
-                      </Dialog>
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(student)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(student._id)}>
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          <div className="w-full overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[25%]">Name</TableHead>
+                  <TableHead className="w-[30%]">Email</TableHead>
+                  <TableHead className="w-[30%]">Enrolled Classes</TableHead>
+                  <TableHead className="w-[15%] text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {students.map((student) => (
+                  <TableRow key={student._id}>
+                    <TableCell className="font-medium w-[25%]">{student.username}</TableCell>
+                    <TableCell className="w-[30%]">{student.email}</TableCell>
+                    <TableCell className="w-[30%]">
+                      <div className="flex flex-wrap gap-1">
+                        {student.enrolledClasses?.length > 0 ? (
+                          student.enrolledClasses.map((cls) => (
+                            <span key={cls._id} className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs flex items-center gap-1">
+                              {cls.code}
+                              <button
+                                onClick={() => handleRemoveClass(student._id, cls._id)}
+                                className="hover:text-red-600"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-muted-foreground text-sm">Not enrolled</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="w-[15%] text-right">
+                      <div className="flex justify-end gap-2">
+                        <Dialog open={assignDialogOpen && selectedStudent?._id === student._id} onOpenChange={(open) => {
+                          setAssignDialogOpen(open);
+                          if (open) setSelectedStudent(student);
+                          else setSelectedStudent(null);
+                        }}>
+                          <DialogTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <BookOpen className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Enroll {student.username} in Class</DialogTitle>
+                              <DialogDescription>Select a class to enroll this student</DialogDescription>
+                            </DialogHeader>
+                            <form onSubmit={handleAssignClass}>
+                              <div className="grid gap-4 py-4">
+                                <div className="grid gap-2">
+                                  <Label htmlFor="class">Select Class</Label>
+                                  <Select value={assignFormData.classId} onValueChange={(value) => setAssignFormData({ classId: value })}>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select a class" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {classes.map((cls) => (
+                                        <SelectItem key={cls._id} value={cls._id}>
+                                          {cls.code} - {cls.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                              <DialogFooter>
+                                <Button type="submit">Enroll Student</Button>
+                              </DialogFooter>
+                            </form>
+                          </DialogContent>
+                        </Dialog>
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(student)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => confirmDelete(student)}>
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Student</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {studentToDelete?.username}? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

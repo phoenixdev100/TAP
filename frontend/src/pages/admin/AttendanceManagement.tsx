@@ -45,7 +45,7 @@ const AttendanceManagement = () => {
   const [selectedDate, setSelectedDate] = useState('');
   const { toast } = useToast();
 
-  const [markFormData, setMarkFormData] = useState<Record<string, 'present' | 'absent' | 'late'>>({});
+  const [markFormData, setMarkFormData] = useState<Record<string, 'present' | 'absent'>>({});
 
   const [reportFilters, setReportFilters] = useState({
     classId: '',
@@ -69,6 +69,16 @@ const AttendanceManagement = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchClassWithStudents = async (classId: string) => {
+    try {
+      const response = await api.get(`/api/classes/${classId}`);
+      return (response.data as any)?.class || (response.data as any)?.data;
+    } catch (error) {
+      console.error('Failed to fetch class with students:', error);
+      return null;
     }
   };
 
@@ -107,7 +117,7 @@ const AttendanceManagement = () => {
   const handleGenerateReport = async () => {
     try {
       const params = new URLSearchParams();
-      if (reportFilters.classId) params.append('classId', reportFilters.classId);
+      if (reportFilters.classId && reportFilters.classId !== 'all') params.append('classId', reportFilters.classId);
       if (reportFilters.startDate) params.append('startDate', reportFilters.startDate);
       if (reportFilters.endDate) params.append('endDate', reportFilters.endDate);
 
@@ -158,8 +168,8 @@ const AttendanceManagement = () => {
             }
           }}>
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
+              <Button variant="outline">
+                <Calendar className="h-4 w-4 mr-2" />
                 Mark Attendance
               </Button>
             </DialogTrigger>
@@ -201,33 +211,36 @@ const AttendanceManagement = () => {
                   {selectedClass && (
                     <div className="space-y-2">
                       <Label>Students</Label>
-                      <div className="max-h-60 overflow-y-auto space-y-2">
-                        {selectedClass.students.map((student) => (
-                          <div key={student._id} className="flex items-center justify-between p-2 border rounded">
-                            <span className="text-sm">{student.username}</span>
-                            <Select 
-                              value={markFormData[student._id] || ''} 
-                              onValueChange={(value: 'present' | 'absent' | 'late') => 
-                                setMarkFormData({ ...markFormData, [student._id]: value })
-                              }
-                            >
-                              <SelectTrigger className="w-32">
-                                <SelectValue placeholder="Status" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="present">Present</SelectItem>
-                                <SelectItem value="absent">Absent</SelectItem>
-                                <SelectItem value="late">Late</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        ))}
-                      </div>
+                      {selectedClass.students && selectedClass.students.length > 0 ? (
+                        <div className="max-h-60 overflow-y-auto space-y-2">
+                          {selectedClass.students.map((student) => (
+                            <div key={student._id} className="flex items-center justify-between p-2 border rounded">
+                              <span className="text-sm">{student.username}</span>
+                              <Select
+                                value={markFormData[student._id] || ''}
+                                onValueChange={(value: 'present' | 'absent') =>
+                                  setMarkFormData({ ...markFormData, [student._id]: value })
+                                }
+                              >
+                                <SelectTrigger className="w-32">
+                                  <SelectValue placeholder="Status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="present">Present</SelectItem>
+                                  <SelectItem value="absent">Absent</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No students enrolled in this class. Please enroll students first.</p>
+                      )}
                     </div>
                   )}
                 </div>
                 <DialogFooter>
-                  <Button type="submit">Mark Attendance</Button>
+                  <Button type="submit">Save</Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -252,7 +265,7 @@ const AttendanceManagement = () => {
                       <SelectValue placeholder="All classes" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All classes</SelectItem>
+                      <SelectItem value="all">All classes</SelectItem>
                       {classes.map((cls) => (
                         <SelectItem key={cls._id} value={cls._id}>
                           {cls.code} - {cls.name}

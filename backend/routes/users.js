@@ -63,8 +63,10 @@ router.put('/profile', auth, async (req, res) => {
 // Get all users
 router.get('/', async (req, res) => {
     try {
-        const users = await User.find();
-        res.json(users);
+        const { role } = req.query;
+        const filter = role ? { role } : {};
+        const users = await User.find(filter).populate('enrolledClasses', 'name code');
+        res.json({ success: true, data: users });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -122,6 +124,24 @@ router.post('/', auth, async (req, res) => {
 });
 
 // Update user
+router.put('/:id', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        if (req.body.username) user.username = req.body.username;
+        if (req.body.email) user.email = req.body.email;
+        if (req.body.password) user.password = req.body.password;
+        if (req.body.role) user.role = req.body.role;
+
+        const updatedUser = await user.save();
+        res.json({ success: true, data: updatedUser });
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
+// Update user (PATCH)
 router.patch('/:id', async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
@@ -144,7 +164,7 @@ router.delete('/:id', async (req, res) => {
         const user = await User.findById(req.params.id);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
-        await user.remove();
+        await User.findByIdAndDelete(req.params.id);
         res.json({ message: 'User deleted' });
     } catch (err) {
         res.status(500).json({ message: err.message });

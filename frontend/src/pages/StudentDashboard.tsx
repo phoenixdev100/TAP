@@ -75,46 +75,8 @@ const StudentDashboard = () => {
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [academicStats, setAcademicStats] = useState({
     attendanceRate: 0,
-    assignmentCompletion: 0,
-    studyTime: 0,
-    gpa: 0,
-    currentSemester: 'Spring 2024'
+    assignmentCompletion: 0
   });
-
-  // Chart data
-  const gradeTrendData = [
-    { month: 'Jan', grade: 7.5 },
-    { month: 'Feb', grade: 8.0 },
-    { month: 'Mar', grade: 8.2 },
-    { month: 'Apr', grade: 8.5 },
-    { month: 'May', grade: 8.8 },
-    { month: 'Jun', grade: 9.0 },
-  ];
-
-  const subjectBreakdownData = [
-    { name: 'Mathematics', value: 30, color: '#8884d8' },
-    { name: 'Physics', value: 25, color: '#82ca9d' },
-    { name: 'Chemistry', value: 20, color: '#ffc658' },
-    { name: 'English', value: 15, color: '#ff7300' },
-    { name: 'Computer Science', value: 10, color: '#0088fe' },
-  ];
-
-  const weeklyActivityData = [
-    { day: 'Mon', hours: 4 },
-    { day: 'Tue', hours: 5 },
-    { day: 'Wed', hours: 3 },
-    { day: 'Thu', hours: 6 },
-    { day: 'Fri', hours: 4 },
-    { day: 'Sat', hours: 2 },
-    { day: 'Sun', hours: 1 },
-  ];
-
-  const chartConfig = {
-    grade: {
-      label: 'GPA',
-      color: '#8884d8',
-    },
-  };
 
   useEffect(() => {
     fetchDashboardData();
@@ -123,20 +85,20 @@ const StudentDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      
+
       // Fetch user's schedules
       const scheduleResponse = await api.get('/api/schedule');
       const userSchedules = (scheduleResponse.data as any).schedules || [];
       setSchedules(userSchedules);
-      
+
       // Generate upcoming events from schedules
       const events = generateUpcomingEvents(userSchedules);
       setUpcomingEvents(events);
-      
+
       // Calculate academic stats
       const stats = await calculateAcademicStats(userSchedules);
       setAcademicStats(stats);
-      
+
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       toast({
@@ -152,12 +114,12 @@ const StudentDashboard = () => {
   const generateUpcomingEvents = (schedules) => {
     const today = new Date();
     const events = [];
-    
+
     schedules.forEach(schedule => {
       const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
       const scheduleDay = daysOfWeek.indexOf(schedule.dayOfWeek);
       const currentDay = today.getDay();
-      
+
       if (scheduleDay === currentDay) {
         events.push({
           title: schedule.className,
@@ -174,7 +136,7 @@ const StudentDashboard = () => {
         });
       }
     });
-    
+
     return events.slice(0, 3);
   };
 
@@ -185,26 +147,20 @@ const StudentDashboard = () => {
         api.get('/api/analytics/attendance'),
         api.get('/api/analytics/assignments')
       ]);
-      
+
       const attendanceData = (attendanceResponse.data as any)?.data || {};
       const assignmentData = (assignmentsResponse.data as any)?.data || {};
-      
+
       return {
         attendanceRate: attendanceData.attendancePercentage || 0,
-        assignmentCompletion: assignmentData.submissionRate || 0,
-        studyTime: 0, // This would need a dedicated endpoint
-        gpa: assignmentData.averageMarks ? parseFloat((assignmentData.averageMarks / 10).toFixed(1)) : 0,
-        currentSemester: 'Spring 2024'
+        assignmentCompletion: assignmentData.submissionRate || 0
       };
     } catch (error) {
       console.error('Error fetching academic stats:', error);
       // Fallback to zero values if backend endpoints don't exist
       return {
         attendanceRate: 0,
-        assignmentCompletion: 0,
-        studyTime: 0,
-        gpa: 0,
-        currentSemester: 'Spring 2024'
+        assignmentCompletion: 0
       };
     }
   };
@@ -212,46 +168,6 @@ const StudentDashboard = () => {
   const handleLogout = () => {
     logout();
     navigate('/');
-  };
-
-  const calculateGPA = () => {
-    // Calculate GPA based on assignment completion and attendance
-    const assignmentCompletion = academicStats.assignmentCompletion || 0;
-    const attendanceRate = academicStats.attendanceRate || 0;
-    
-    // Use existing GPA if available, otherwise calculate based on performance metrics
-    if (academicStats.gpa) {
-      // Convert existing GPA to 1-10 scale if it's in 1-4 scale
-      const existingGPA = academicStats.gpa;
-      if (existingGPA <= 4) {
-        return (existingGPA * 2.5).toFixed(1);
-      }
-      return existingGPA.toFixed(1);
-    }
-    
-    // Calculate GPA based on assignment completion and attendance
-    const performanceScore = (assignmentCompletion * 0.7 + attendanceRate * 0.3);
-    
-    // Convert percentage to GPA scale (1-10)
-    if (performanceScore >= 95) return '10.0';
-    if (performanceScore >= 90) return '9.5';
-    if (performanceScore >= 85) return '9.0';
-    if (performanceScore >= 80) return '8.5';
-    if (performanceScore >= 75) return '8.0';
-    if (performanceScore >= 70) return '7.5';
-    if (performanceScore >= 65) return '7.0';
-    if (performanceScore >= 60) return '6.5';
-    if (performanceScore >= 55) return '6.0';
-    if (performanceScore >= 50) return '5.5';
-    if (performanceScore >= 45) return '5.0';
-    if (performanceScore >= 40) return '4.5';
-    if (performanceScore >= 35) return '4.0';
-    if (performanceScore >= 30) return '3.5';
-    if (performanceScore >= 25) return '3.0';
-    if (performanceScore >= 20) return '2.5';
-    if (performanceScore >= 15) return '2.0';
-    if (performanceScore >= 10) return '1.5';
-    return '1.0';
   };
 
   return (
@@ -389,20 +305,13 @@ const StudentDashboard = () => {
                   </div>
                   <Progress value={academicStats.assignmentCompletion} className="h-2" />
                 </div>
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-sm font-medium">Study Time</span>
-                    <span className="text-sm text-muted-foreground">{academicStats.studyTime} hours this week</span>
-                  </div>
-                  <Progress value={(academicStats.studyTime / 20) * 100} className="h-2" />
-                </div>
               </CardContent>
             </Card>
           </div>
 
           <div>
             <h3 className="text-xl font-semibold mb-4">Quick Access</h3>
-            <motion.div 
+            <motion.div
               className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
               variants={container}
               initial="hidden"
@@ -410,7 +319,7 @@ const StudentDashboard = () => {
             >
               {features.map((feature, i) => (
                 <motion.div key={i} variants={item}>
-                  <Card 
+                  <Card
                     className={`cursor-pointer hover:shadow-md transition-all duration-300 bg-gradient-to-br ${feature.color} border-none overflow-hidden relative h-full`}
                     onClick={() => navigate(feature.path)}
                   >
@@ -428,91 +337,6 @@ const StudentDashboard = () => {
                 </motion.div>
               ))}
             </motion.div>
-          </div>
-
-          <div>
-            <h3 className="text-xl font-semibold mb-4">Academic Performance</h3>
-            <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BarChart2 className="h-5 w-5 text-primary" />
-                    Grade Trend
-                  </CardTitle>
-                  <CardDescription>Your GPA over the last 6 months</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ChartContainer config={chartConfig} className="h-[200px] w-full">
-                    <LineChart data={gradeTrendData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="month" className="text-xs" />
-                      <YAxis className="text-xs" domain={[0, 10]} />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Line type="monotone" dataKey="grade" stroke="#8884d8" strokeWidth={2} dot={{ fill: '#8884d8' }} />
-                    </LineChart>
-                  </ChartContainer>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BookOpen className="h-5 w-5 text-primary" />
-                    Subject Breakdown
-                  </CardTitle>
-                  <CardDescription>Time distribution by subject</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ChartContainer config={chartConfig} className="h-[200px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={subjectBreakdownData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={40}
-                          outerRadius={70}
-                          paddingAngle={5}
-                          dataKey="value"
-                        >
-                          {subjectBreakdownData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          <div>
-            <h3 className="text-xl font-semibold mb-4">Weekly Activity</h3>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CalendarDays className="h-5 w-5 text-primary" />
-                  Study Hours This Week
-                </CardTitle>
-                <CardDescription>Your daily study time distribution</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ChartContainer config={chartConfig} className="h-[150px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={weeklyActivityData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="day" className="text-xs" />
-                      <YAxis className="text-xs" />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Line type="monotone" dataKey="hours" stroke="#82ca9d" strokeWidth={2} dot={{ fill: '#82ca9d' }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </main>

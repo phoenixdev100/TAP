@@ -44,7 +44,9 @@ const NotesManagement = () => {
   const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [noteToDelete, setNoteToDelete] = useState<Note | null>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -52,7 +54,6 @@ const NotesManagement = () => {
     subject: '',
     description: '',
     classId: '',
-    tags: '',
     isPublic: true
   });
 
@@ -64,7 +65,7 @@ const NotesManagement = () => {
   const fetchNotes = async () => {
     try {
       const response = await api.get('/api/notes');
-      setNotes((response.data as any)?.data || []);
+      setNotes((response.data as any)?.notes || (response.data as any)?.data || []);
     } catch (error) {
       toast({
         title: "Error",
@@ -90,7 +91,7 @@ const NotesManagement = () => {
     try {
       const data = {
         ...formData,
-        tags: formData.tags.split(',').map(t => t.trim()).filter(t => t)
+        classId: formData.classId === 'none' ? '' : formData.classId
       };
 
       if (editingNote) {
@@ -125,29 +126,35 @@ const NotesManagement = () => {
       subject: note.subject,
       description: note.description,
       classId: note.classId || '',
-      tags: note.tags.join(', '),
       isPublic: note.isPublic
     });
     setDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this note?')) {
-      try {
-        await api.delete(`/api/notes/${id}`);
-        toast({
-          title: "Success",
-          description: "Note deleted successfully"
-        });
-        fetchNotes();
-      } catch (error: any) {
-        toast({
-          title: "Error",
-          description: error.response?.data?.message || "Failed to delete note",
-          variant: "destructive"
-        });
-      }
+  const handleDelete = async () => {
+    if (!noteToDelete) return;
+
+    try {
+      await api.delete(`/api/notes/${noteToDelete._id}`);
+      toast({
+        title: "Success",
+        description: "Note deleted successfully"
+      });
+      setDeleteDialogOpen(false);
+      setNoteToDelete(null);
+      fetchNotes();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to delete note",
+        variant: "destructive"
+      });
     }
+  };
+
+  const confirmDelete = (note: Note) => {
+    setNoteToDelete(note);
+    setDeleteDialogOpen(true);
   };
 
   const handleTogglePublic = async (note: Note) => {
@@ -173,7 +180,6 @@ const NotesManagement = () => {
       subject: '',
       description: '',
       classId: '',
-      tags: '',
       isPublic: true
     });
     setEditingNote(null);
@@ -239,7 +245,7 @@ const NotesManagement = () => {
                       <SelectValue placeholder="Select a class" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No class</SelectItem>
+                      <SelectItem value="none">No class</SelectItem>
                       {classes.map((cls) => (
                         <SelectItem key={cls._id} value={cls._id}>
                           {cls.code} - {cls.name}
@@ -255,15 +261,6 @@ const NotesManagement = () => {
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="tags">Tags (comma-separated)</Label>
-                  <Input
-                    id="tags"
-                    value={formData.tags}
-                    onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                    placeholder="e.g., math, calculus, chapter1"
                   />
                 </div>
                 <div className="flex items-center gap-2">
@@ -291,72 +288,92 @@ const NotesManagement = () => {
           <CardDescription>Manage study materials and resources</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Subject</TableHead>
-                <TableHead>Author</TableHead>
-                <TableHead>Class</TableHead>
-                <TableHead>Downloads</TableHead>
-                <TableHead>Rating</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {notes.map((note) => (
-                <TableRow key={note._id}>
-                  <TableCell className="font-medium">{note.title}</TableCell>
-                  <TableCell>{note.subject}</TableCell>
-                  <TableCell>{note.authorName}</TableCell>
-                  <TableCell>
-                    {note.classId ? (
-                      <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
-                        Assigned
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground text-sm">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Download className="h-4 w-4" />
-                      {note.downloads}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center">
-                      <span className="mr-1">{note.rating}</span>
-                      <span className="text-yellow-500">★</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      note.isPublic ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {note.isPublic ? 'Public' : 'Private'}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => handleTogglePublic(note)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(note)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(note._id)}>
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          <div className="w-full overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[18%]">Title</TableHead>
+                  <TableHead className="w-[12%]">Subject</TableHead>
+                  <TableHead className="w-[12%]">Author</TableHead>
+                  <TableHead className="w-[10%]">Class</TableHead>
+                  <TableHead className="w-[10%]">Downloads</TableHead>
+                  <TableHead className="w-[10%]">Rating</TableHead>
+                  <TableHead className="w-[10%]">Status</TableHead>
+                  <TableHead className="w-[18%] text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {notes.map((note) => (
+                  <TableRow key={note._id}>
+                    <TableCell className="font-medium w-[18%]">{note.title}</TableCell>
+                    <TableCell className="w-[12%]">{note.subject}</TableCell>
+                    <TableCell className="w-[12%]">{note.authorName}</TableCell>
+                    <TableCell className="w-[10%]">
+                      {note.classId ? (
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                          Assigned
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="w-[10%]">
+                      <div className="flex items-center gap-1">
+                        <Download className="h-4 w-4" />
+                        {note.downloads}
+                      </div>
+                    </TableCell>
+                    <TableCell className="w-[10%]">
+                      <div className="flex items-center">
+                        <span className="mr-1">{note.rating}</span>
+                        <span className="text-yellow-500">★</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="w-[10%]">
+                      <span className={`px-2 py-1 rounded-full text-xs ${note.isPublic ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        }`}>
+                        {note.isPublic ? 'Public' : 'Private'}
+                      </span>
+                    </TableCell>
+                    <TableCell className="w-[18%] text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => handleTogglePublic(note)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(note)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => confirmDelete(note)}>
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Note</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this note "{noteToDelete?.title}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

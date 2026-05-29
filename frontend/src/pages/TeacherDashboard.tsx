@@ -88,12 +88,7 @@ const TeacherDashboard = () => {
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [teacherStats, setTeacherStats] = useState({
     totalStudents: 0,
-    totalClasses: 0,
-    avgAttendance: 0,
-    pendingAssignments: 0,
-    assignmentGradingRate: 0,
-    studentEngagement: 0,
-    currentSemester: 'Spring 2024'
+    totalClasses: 0
   });
 
   useEffect(() => {
@@ -103,20 +98,20 @@ const TeacherDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      
+
       // Fetch user's schedules
       const scheduleResponse = await api.get('/api/schedule');
       const userSchedules = (scheduleResponse.data as any).schedules || [];
       setSchedules(userSchedules);
-      
+
       // Generate upcoming events from schedules
       const events = generateUpcomingEvents(userSchedules);
       setUpcomingEvents(events);
-      
+
       // Calculate teacher stats from real data
       const stats = await calculateTeacherStats(userSchedules);
       setTeacherStats(stats);
-      
+
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       toast({
@@ -132,12 +127,12 @@ const TeacherDashboard = () => {
   const generateUpcomingEvents = (schedules) => {
     const today = new Date();
     const events = [];
-    
+
     schedules.forEach(schedule => {
       const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
       const scheduleDay = daysOfWeek.indexOf(schedule.dayOfWeek);
       const currentDay = today.getDay();
-      
+
       if (scheduleDay === currentDay) {
         events.push({
           title: `Teach ${schedule.className}`,
@@ -154,46 +149,29 @@ const TeacherDashboard = () => {
         });
       }
     });
-    
+
     return events.slice(0, 3);
   };
 
   const calculateTeacherStats = async (schedules) => {
     try {
       // Fetch real data from backend
-      const [attendanceResponse, assignmentsResponse, studentsResponse] = await Promise.all([
-        api.get('/api/analytics/attendance'),
-        api.get('/api/analytics/assignments'),
-        api.get('/api/users')
-      ]);
-      
-      const attendanceData = (attendanceResponse.data as any)?.data || {};
-      const assignmentData = (assignmentsResponse.data as any)?.data || {};
+      const studentsResponse = await api.get('/api/users');
       const usersData = (studentsResponse.data as any)?.data || [];
-      
+
       // Count students (users with role 'student')
       const totalStudents = usersData.filter((u: any) => u.role === 'student').length;
-      
+
       return {
         totalStudents: totalStudents || 0,
-        totalClasses: schedules.length,
-        avgAttendance: attendanceData.attendancePercentage || 0,
-        pendingAssignments: assignmentData.pendingCount || 0,
-        assignmentGradingRate: assignmentData.submissionRate || 0,
-        studentEngagement: attendanceData.attendancePercentage || 0,
-        currentSemester: 'Spring 2024'
+        totalClasses: schedules.length
       };
     } catch (error) {
       console.error('Error fetching teacher stats:', error);
       // Fallback to calculated values if backend endpoints don't exist
       return {
         totalStudents: 0,
-        totalClasses: schedules.length,
-        avgAttendance: 0,
-        pendingAssignments: 0,
-        assignmentGradingRate: 0,
-        studentEngagement: 0,
-        currentSemester: 'Spring 2024'
+        totalClasses: schedules.length
       };
     }
   };
@@ -281,7 +259,7 @@ const TeacherDashboard = () => {
                 <p className="text-xs text-muted-foreground">Active this semester</p>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Classes Teaching</CardTitle>
@@ -292,33 +270,11 @@ const TeacherDashboard = () => {
                 <p className="text-xs text-muted-foreground">This semester</p>
               </CardContent>
             </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Avg Attendance</CardTitle>
-                <UserCheck className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{teacherStats.avgAttendance}%</div>
-                <p className="text-xs text-muted-foreground">Across all classes</p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pending Tasks</CardTitle>
-                <ListTodo className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{teacherStats.pendingAssignments}</div>
-                <p className="text-xs text-muted-foreground">Assignments to grade</p>
-              </CardContent>
-            </Card>
           </div>
 
           <div>
             <h3 className="text-xl font-semibold mb-4">Management Tools</h3>
-            <motion.div 
+            <motion.div
               className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
               variants={container}
               initial="hidden"
@@ -326,7 +282,7 @@ const TeacherDashboard = () => {
             >
               {features.map((feature, i) => (
                 <motion.div key={i} variants={item}>
-                  <Card 
+                  <Card
                     className={`cursor-pointer hover:shadow-md transition-all duration-300 bg-gradient-to-br ${feature.color} border-none overflow-hidden relative h-full`}
                     onClick={() => navigate(feature.path)}
                   >
@@ -394,39 +350,6 @@ const TeacherDashboard = () => {
                     <p className="text-sm">Add your teaching schedule to see upcoming classes</p>
                   </div>
                 )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart2 className="h-5 w-5 text-primary" />
-                  Teaching Analytics
-                </CardTitle>
-                <CardDescription>Your teaching performance</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-sm font-medium">Class Attendance</span>
-                    <span className="text-sm text-muted-foreground">{teacherStats.avgAttendance}%</span>
-                  </div>
-                  <Progress value={teacherStats.avgAttendance} className="h-2" />
-                </div>
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-sm font-medium">Assignment Grading</span>
-                    <span className="text-sm text-muted-foreground">{teacherStats.assignmentGradingRate}%</span>
-                  </div>
-                  <Progress value={teacherStats.assignmentGradingRate} className="h-2" />
-                </div>
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-sm font-medium">Student Engagement</span>
-                    <span className="text-sm text-muted-foreground">{teacherStats.studentEngagement}%</span>
-                  </div>
-                  <Progress value={teacherStats.studentEngagement} className="h-2" />
-                </div>
               </CardContent>
             </Card>
           </div>

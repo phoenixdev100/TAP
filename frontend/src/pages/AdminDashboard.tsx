@@ -87,12 +87,7 @@ const AdminDashboard = () => {
     totalUsers: 0,
     totalStudents: 0,
     totalTeachers: 0,
-    totalClasses: 0,
-    systemHealth: 0,
-    storageUsed: 0,
-    serverLoad: 0,
-    databasePerformance: 0,
-    currentSemester: 'Spring 2024'
+    totalClasses: 0
   });
 
   useEffect(() => {
@@ -102,11 +97,11 @@ const AdminDashboard = () => {
   const fetchSystemData = async () => {
     try {
       setLoading(true);
-      
+
       // Fetch system statistics
       const stats = await calculateSystemStats();
       setSystemStats(stats);
-      
+
     } catch (error) {
       console.error('Error fetching system data:', error);
       toast({
@@ -126,25 +121,20 @@ const AdminDashboard = () => {
         api.get('/api/users'),
         api.get('/api/classes')
       ]);
-      
+
       const usersData = (usersResponse.data as any)?.data || [];
       const classesData = (classesResponse.data as any)?.data || [];
-      
+
       // Count users by role
       const totalStudents = usersData.filter((u: any) => u.role === 'student').length;
       const totalTeachers = usersData.filter((u: any) => u.role === 'teacher').length;
       const totalAdmins = usersData.filter((u: any) => u.role === 'college_admin').length;
-      
+
       return {
         totalUsers: Number(usersData.length) || 0,
         totalStudents: Number(totalStudents) || 0,
         totalTeachers: Number(totalTeachers) || 0,
-        totalClasses: Number(classesData.length) || 0,
-        systemHealth: 100, // Would need dedicated health check endpoint
-        storageUsed: 0, // Would need dedicated storage endpoint
-        serverLoad: 0, // Would need dedicated monitoring endpoint
-        databasePerformance: 0, // Would need dedicated monitoring endpoint
-        currentSemester: 'Spring 2024'
+        totalClasses: Number(classesData.length) || 0
       };
     } catch (error) {
       console.error('Error fetching system stats:', error);
@@ -153,12 +143,7 @@ const AdminDashboard = () => {
         totalUsers: 0,
         totalStudents: 0,
         totalTeachers: 0,
-        totalClasses: 0,
-        systemHealth: 0,
-        storageUsed: 0,
-        serverLoad: 0,
-        databasePerformance: 0,
-        currentSemester: 'Spring 2024'
+        totalClasses: 0
       };
     }
   };
@@ -243,7 +228,7 @@ const AdminDashboard = () => {
                 <p className="text-xs text-muted-foreground">All registered users</p>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Students</CardTitle>
@@ -254,7 +239,7 @@ const AdminDashboard = () => {
                 <p className="text-xs text-muted-foreground">Active students</p>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Teachers</CardTitle>
@@ -265,7 +250,7 @@ const AdminDashboard = () => {
                 <p className="text-xs text-muted-foreground">Active teachers</p>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Classes</CardTitle>
@@ -280,7 +265,7 @@ const AdminDashboard = () => {
 
           <div>
             <h3 className="text-xl font-semibold mb-4">Administration Tools</h3>
-            <motion.div 
+            <motion.div
               className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
               variants={container}
               initial="hidden"
@@ -288,7 +273,7 @@ const AdminDashboard = () => {
             >
               {features.map((feature, i) => (
                 <motion.div key={i} variants={item}>
-                  <Card 
+                  <Card
                     className={`cursor-pointer hover:shadow-md transition-all duration-300 bg-gradient-to-br ${feature.color} border-none overflow-hidden relative h-full`}
                     onClick={() => navigate(feature.path)}
                   >
@@ -306,76 +291,6 @@ const AdminDashboard = () => {
                 </motion.div>
               ))}
             </motion.div>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <Card className="col-span-full lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Database className="h-5 w-5 text-primary" />
-                  System Overview
-                </CardTitle>
-                <CardDescription>Platform health and resource usage</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-sm font-medium">System Health</span>
-                    <span className="text-sm text-muted-foreground">{systemStats.systemHealth}%</span>
-                  </div>
-                  <Progress value={systemStats.systemHealth} className="h-2" />
-                </div>
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-sm font-medium">Storage Usage</span>
-                    <span className="text-sm text-muted-foreground">{systemStats.storageUsed}%</span>
-                  </div>
-                  <Progress value={systemStats.storageUsed} className="h-2" />
-                </div>
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-sm font-medium">Server Load</span>
-                    <span className="text-sm text-muted-foreground">{systemStats.serverLoad}%</span>
-                  </div>
-                  <Progress value={systemStats.serverLoad} className="h-2" />
-                </div>
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-sm font-medium">Database Performance</span>
-                    <span className="text-sm text-muted-foreground">{systemStats.databasePerformance}%</span>
-                  </div>
-                  <Progress value={systemStats.databasePerformance} className="h-2" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-primary" />
-                  Security Status
-                </CardTitle>
-                <CardDescription>System security overview</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Firewall</span>
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">SSL Certificate</span>
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Last Backup</span>
-                  <span className="text-sm text-muted-foreground">N/A</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Active Sessions</span>
-                  <span className="text-sm text-muted-foreground">0</span>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </main>

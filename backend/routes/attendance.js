@@ -10,9 +10,9 @@ router.get('/stats', auth, async (req, res) => {
   try {
     const userRole = req.user.role || 'student';
     const userId = req.user.userId;
-    
+
     const stats = await Attendance.getStats(userId, userRole);
-    
+
     res.json({
       success: true,
       ...stats
@@ -31,7 +31,7 @@ router.get('/records', auth, async (req, res) => {
   try {
     const userId = req.user.userId;
     const userRole = req.user.role || 'student';
-    
+
     let records;
     if (userRole === 'student') {
       // Student sees their own records
@@ -65,7 +65,7 @@ router.get('/records', auth, async (req, res) => {
 router.post('/mark', auth, async (req, res) => {
   try {
     const { studentId, classId, status, date, className, notes } = req.body;
-    
+
     // Validate that user is a teacher or admin
     if (req.user.role !== 'teacher' && req.user.role !== 'college_admin') {
       return res.status(403).json({
@@ -130,7 +130,7 @@ router.post('/mark', auth, async (req, res) => {
     });
   } catch (error) {
     logger.error('Error marking attendance:', error);
-    
+
     // Handle duplicate key error (already marked for this date/class)
     if (error.code === 11000) {
       return res.status(400).json({
@@ -138,10 +138,52 @@ router.post('/mark', auth, async (req, res) => {
         message: 'Attendance already marked for this student on this date for this class'
       });
     }
-    
+
     res.status(500).json({
       success: false,
       message: 'Error marking attendance'
+    });
+  }
+});
+
+// Generate attendance report
+router.get('/report', auth, async (req, res) => {
+  try {
+    const { classId, startDate, endDate } = req.query;
+    const userRole = req.user.role;
+
+    // Build query
+    const query = {};
+    if (classId) query.classId = classId;
+    if (startDate || endDate) {
+      query.date = {};
+      if (startDate) query.date.$gte = new Date(startDate);
+      if (endDate) query.date.$lte = new Date(endDate);
+    }
+
+    let records;
+    if (userRole === 'college_admin' || userRole === 'teacher') {
+      // Admins and teachers can see all records
+      records = await Attendance.find(query)
+        .populate('student', 'username firstName lastName email')
+        .sort({ date: -1 });
+    } else {
+      // Students can only see their own records
+      query.student = req.user.userId;
+      records = await Attendance.find(query)
+        .populate('student', 'username firstName lastName email')
+        .sort({ date: -1 });
+    }
+
+    res.json({
+      success: true,
+      data: records
+    });
+  } catch (error) {
+    logger.error('Error generating attendance report:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error generating attendance report'
     });
   }
 });

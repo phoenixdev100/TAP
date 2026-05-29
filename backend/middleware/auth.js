@@ -15,13 +15,13 @@ const auth = (req, res, next) => {
 
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    
+
     // Add user info to request
     req.user = {
       userId: decoded.userId,
       role: decoded.role
     };
-    
+
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);
