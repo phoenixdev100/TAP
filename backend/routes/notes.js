@@ -35,6 +35,9 @@ const NoteSchema = new mongoose.Schema({
   subject: { type: String, required: true },
   description: { type: String, required: true },
   classId: { type: mongoose.Schema.Types.ObjectId, ref: 'Class' },
+  className: { type: String },
+  url: { type: String },
+  date: { type: Date },
   author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   authorName: { type: String, required: true },
   uploadDate: { type: Date, default: Date.now },
@@ -162,7 +165,7 @@ router.get('/:id', auth, async (req, res) => {
 // POST /api/notes - Create new note without file upload
 router.post('/', auth, async (req, res) => {
   try {
-    const { title, subject, description, classId, tags, isPublic } = req.body;
+    const { title, subject, description, classId, className, url, date, tags, isPublic } = req.body;
 
     if (!title || !subject || !description) {
       return res.status(400).json({ message: 'Title, subject, and description are required' });
@@ -190,6 +193,9 @@ router.post('/', auth, async (req, res) => {
       subject,
       description,
       classId: classId || null,
+      className: className || null,
+      url: url || null,
+      date: date || null,
       author: req.user.userId,
       authorName: user.username,
       fileType: 'text/plain',
@@ -225,7 +231,7 @@ router.post('/', auth, async (req, res) => {
 // PUT /api/notes/:id - Update note
 router.put('/:id', auth, async (req, res) => {
   try {
-    const { title, subject, description, classId, tags, isPublic } = req.body;
+    const { title, subject, description, classId, className, url, date, tags, isPublic } = req.body;
 
     const note = await Note.findById(req.params.id);
 
@@ -243,6 +249,9 @@ router.put('/:id', auth, async (req, res) => {
     if (subject) note.subject = subject;
     if (description) note.description = description;
     if (classId !== undefined) note.classId = classId || null;
+    if (className !== undefined) note.className = className || null;
+    if (url !== undefined) note.url = url || null;
+    if (date !== undefined) note.date = date || null;
     if (tags !== undefined) {
       if (Array.isArray(tags)) {
         note.tags = tags.filter(tag => typeof tag === 'string' && tag.trim());

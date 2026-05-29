@@ -8,8 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
-import { User, Plus, Edit, Trash2, BookOpen, ArrowLeft } from "lucide-react";
+import { User, Plus, Edit, Trash2, BookOpen, ArrowLeft, Search } from "lucide-react";
+import { motion } from "framer-motion";
 import api from '@/api/axios';
+import Loader from '@/components/Loader';
+import logger from '@/utils/logger';
 
 interface Student {
   _id: string;
@@ -40,6 +43,7 @@ const StudentManagement = () => {
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -56,12 +60,22 @@ const StudentManagement = () => {
   useEffect(() => {
     fetchStudents();
     fetchClasses();
-  }, []);
+  }, [searchQuery]);
 
   const fetchStudents = async () => {
     try {
       const response = await api.get('/api/users?role=student');
-      setStudents((response.data as any)?.data || []);
+      let allStudents = (response.data as any)?.data || [];
+
+      // Filter by search
+      if (searchQuery) {
+        allStudents = allStudents.filter((student: Student) =>
+          student.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          student.email.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+      }
+
+      setStudents(allStudents);
     } catch (error) {
       toast({
         title: "Error",
@@ -78,7 +92,7 @@ const StudentManagement = () => {
       const response = await api.get('/api/classes');
       setClasses((response.data as any)?.data || []);
     } catch (error) {
-      console.error('Failed to fetch classes:', error);
+      logger.error('Failed to fetch classes:', error);
     }
   };
 
@@ -199,19 +213,28 @@ const StudentManagement = () => {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return <Loader text="Loading students..." />;
   }
 
   return (
-    <div className="w-full px-6 py-8">
-      <div className="flex justify-between items-center mb-6">
+    <div className="min-h-screen w-full flex flex-col pb-10 sm:pb-0 space-y-6 px-6 py-8 md:px-10 md:py-12">
+      {/* Header Section */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+      >
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate('/admin-dashboard')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Student Management</h1>
-            <p className="text-muted-foreground">Create students and assign to classes</p>
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
+              Student Management
+            </h2>
+            <p className="text-muted-foreground dark:text-gray-400 text-sm sm:text-base">
+              Create students and assign to classes
+            </p>
           </div>
         </div>
         <Dialog open={dialogOpen} onOpenChange={(open) => {
@@ -219,7 +242,7 @@ const StudentManagement = () => {
           if (!open) resetForm();
         }}>
           <DialogTrigger asChild>
-            <Button onClick={() => setEditingStudent(null)}>
+            <Button onClick={() => setEditingStudent(null)} className="bg-gradient-to-r from-[#7C3AED] to-[#A855F7] hover:from-[#6D28D9] hover:to-[#9333EA] text-white shadow-lg transition-all duration-300">
               <Plus className="h-4 w-4 mr-2" />
               Create Student
             </Button>
@@ -271,104 +294,114 @@ const StudentManagement = () => {
             </form>
           </DialogContent>
         </Dialog>
-      </div>
+      </motion.div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>All Students</CardTitle>
-          <CardDescription>Manage your institution's students</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="w-full overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[25%]">Name</TableHead>
-                  <TableHead className="w-[30%]">Email</TableHead>
-                  <TableHead className="w-[30%]">Enrolled Classes</TableHead>
-                  <TableHead className="w-[15%] text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {students.map((student) => (
-                  <TableRow key={student._id}>
-                    <TableCell className="font-medium w-[25%]">{student.username}</TableCell>
-                    <TableCell className="w-[30%]">{student.email}</TableCell>
-                    <TableCell className="w-[30%]">
-                      <div className="flex flex-wrap gap-1">
-                        {student.enrolledClasses?.length > 0 ? (
-                          student.enrolledClasses.map((cls) => (
-                            <span key={cls._id} className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs flex items-center gap-1">
-                              {cls.code}
-                              <button
-                                onClick={() => handleRemoveClass(student._id, cls._id)}
-                                className="hover:text-red-600"
-                              >
-                                ×
-                              </button>
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-muted-foreground text-sm">Not enrolled</span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="w-[15%] text-right">
-                      <div className="flex justify-end gap-2">
-                        <Dialog open={assignDialogOpen && selectedStudent?._id === student._id} onOpenChange={(open) => {
-                          setAssignDialogOpen(open);
-                          if (open) setSelectedStudent(student);
-                          else setSelectedStudent(null);
-                        }}>
-                          <DialogTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <BookOpen className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Enroll {student.username} in Class</DialogTitle>
-                              <DialogDescription>Select a class to enroll this student</DialogDescription>
-                            </DialogHeader>
-                            <form onSubmit={handleAssignClass}>
-                              <div className="grid gap-4 py-4">
-                                <div className="grid gap-2">
-                                  <Label htmlFor="class">Select Class</Label>
-                                  <Select value={assignFormData.classId} onValueChange={(value) => setAssignFormData({ classId: value })}>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select a class" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {classes.map((cls) => (
-                                        <SelectItem key={cls._id} value={cls._id}>
-                                          {cls.code} - {cls.name}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              </div>
-                              <DialogFooter>
-                                <Button type="submit">Enroll Student</Button>
-                              </DialogFooter>
-                            </form>
-                          </DialogContent>
-                        </Dialog>
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(student)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => confirmDelete(student)}>
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Search Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="flex flex-col sm:flex-row gap-4"
+      >
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search students by name or email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 h-12 border-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-slate-800/50 dark:border-slate-600 rounded-2xl"
+          />
+        </div>
+      </motion.div>
+
+      {/* Students List */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="space-y-3"
+      >
+        {students.map((student) => (
+          <Card key={student._id} className="hover:shadow-lg transition-all duration-300 hover:scale-[1.01] backdrop-blur-sm bg-white/50 dark:bg-slate-800/50 border-2 dark:border-slate-700">
+            <CardHeader className="py-3">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <CardTitle className="text-base sm:text-lg font-semibold truncate">{student.username}</CardTitle>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-sm text-muted-foreground truncate">{student.email}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">•</span>
+                  <div className="flex flex-wrap gap-1">
+                    {student.enrolledClasses?.length > 0 ? (
+                      student.enrolledClasses.map((cls) => (
+                        <span key={cls._id} className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded text-xs flex items-center gap-1">
+                          {cls.code}
+                          <button
+                            onClick={() => handleRemoveClass(student._id, cls._id)}
+                            className="hover:text-red-600"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Not enrolled</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <Dialog open={assignDialogOpen && selectedStudent?._id === student._id} onOpenChange={(open) => {
+                    setAssignDialogOpen(open);
+                    if (open) setSelectedStudent(student);
+                    else setSelectedStudent(null);
+                  }}>
+                    <DialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <BookOpen className="h-4 w-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Enroll {student.username} in Class</DialogTitle>
+                        <DialogDescription>Select a class to enroll this student</DialogDescription>
+                      </DialogHeader>
+                      <form onSubmit={handleAssignClass}>
+                        <div className="grid gap-4 py-4">
+                          <div className="grid gap-2">
+                            <Label htmlFor="class">Select Class</Label>
+                            <Select value={assignFormData.classId} onValueChange={(value) => setAssignFormData({ classId: value })}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a class" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {classes.map((cls) => (
+                                  <SelectItem key={cls._id} value={cls._id}>
+                                    {cls.code} - {cls.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button type="submit">Enroll Student</Button>
+                        </DialogFooter>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                  <Button variant="ghost" size="icon" onClick={() => handleEdit(student)} className="h-8 w-8">
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => confirmDelete(student)} className="h-8 w-8">
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+        ))}
+      </motion.div>
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>

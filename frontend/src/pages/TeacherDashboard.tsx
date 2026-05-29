@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarDays, BookOpen, ListTodo, FileText, UserCheck, Bell, BarChart2, LogOut, Users, Settings, Sparkles, User, Moon, Sun } from "lucide-react";
+import { CalendarDays, ListTodo, FileText, UserCheck, Bell, BarChart2, LogOut, Users, Sparkles, User, Moon, Sun } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Progress } from "@/components/ui/progress";
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import logger from '@/utils/logger';
 import api from '@/api/axios';
 import {
   DropdownMenu,
@@ -45,20 +45,6 @@ const features = [
     icon: <UserCheck className="h-8 w-8 text-purple-500" />,
     path: "/attendance",
     color: "from-purple-50 to-fuchsia-50 dark:from-purple-950 dark:to-fuchsia-950"
-  },
-  {
-    title: "Student Management",
-    description: "View and manage student data",
-    icon: <Users className="h-8 w-8 text-cyan-500" />,
-    path: "/students",
-    color: "from-cyan-50 to-sky-50 dark:from-cyan-950 dark:to-sky-950"
-  },
-  {
-    title: "Settings",
-    description: "Manage your teaching preferences",
-    icon: <Settings className="h-8 w-8 text-rose-500" />,
-    path: "/settings",
-    color: "from-rose-50 to-pink-50 dark:from-rose-950 dark:to-pink-950"
   }
 ];
 
@@ -88,7 +74,9 @@ const TeacherDashboard = () => {
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [teacherStats, setTeacherStats] = useState({
     totalStudents: 0,
-    totalClasses: 0
+    totalClasses: 0,
+    totalNotes: 0,
+    totalAssignments: 0
   });
 
   useEffect(() => {
@@ -113,7 +101,7 @@ const TeacherDashboard = () => {
       setTeacherStats(stats);
 
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      logger.error('Error fetching dashboard data:', error);
       toast({
         title: "Error",
         description: "Failed to load dashboard data",
@@ -162,16 +150,38 @@ const TeacherDashboard = () => {
       // Count students (users with role 'student')
       const totalStudents = usersData.filter((u: any) => u.role === 'student').length;
 
+      // Fetch notes
+      let totalNotes = 0;
+      try {
+        const notesResponse = await api.get('/api/notes');
+        totalNotes = (notesResponse.data as any)?.notes?.length || 0;
+      } catch (e) {
+        logger.error('Error fetching notes:', e);
+      }
+
+      // Fetch assignments
+      let totalAssignments = 0;
+      try {
+        const assignmentsResponse = await api.get('/api/assignments');
+        totalAssignments = (assignmentsResponse.data as any)?.assignments?.length || 0;
+      } catch (e) {
+        logger.error('Error fetching assignments:', e);
+      }
+
       return {
         totalStudents: totalStudents || 0,
-        totalClasses: schedules.length
+        totalClasses: schedules.length,
+        totalNotes: totalNotes,
+        totalAssignments: totalAssignments
       };
     } catch (error) {
-      console.error('Error fetching teacher stats:', error);
+      logger.error('Error fetching teacher stats:', error);
       // Fallback to calculated values if backend endpoints don't exist
       return {
         totalStudents: 0,
-        totalClasses: schedules.length
+        totalClasses: schedules.length,
+        totalNotes: 0,
+        totalAssignments: 0
       };
     }
   };
@@ -224,10 +234,6 @@ const TeacherDashboard = () => {
                   <User className="mr-2 h-4 w-4" />
                   <span>Edit Profile</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <BarChart2 className="mr-2 h-4 w-4" />
-                  <span>GPA: 3.5</span>
-                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
@@ -268,6 +274,28 @@ const TeacherDashboard = () => {
               <CardContent>
                 <div className="text-2xl font-bold">{teacherStats.totalClasses}</div>
                 <p className="text-xs text-muted-foreground">This semester</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Notes</CardTitle>
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{teacherStats.totalNotes}</div>
+                <p className="text-xs text-muted-foreground">Study materials uploaded</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Assignments</CardTitle>
+                <ListTodo className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{teacherStats.totalAssignments}</div>
+                <p className="text-xs text-muted-foreground">Assignments created</p>
               </CardContent>
             </Card>
           </div>
@@ -339,7 +367,6 @@ const TeacherDashboard = () => {
                             <p className="text-sm text-muted-foreground">{event.time} • {event.date}</p>
                           </div>
                         </div>
-                        <button className="text-sm text-primary hover:underline">View Details</button>
                       </div>
                     ))}
                   </div>

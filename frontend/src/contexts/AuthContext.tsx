@@ -53,7 +53,7 @@ const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
           localStorage.setItem('refreshToken', storedRefreshToken);
         }
       } catch (error) {
-        console.error('Error parsing stored user data:', error);
+        logger.error('Error parsing stored user data:', error);
         logout();
       }
     }

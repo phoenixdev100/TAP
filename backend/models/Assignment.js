@@ -23,6 +23,10 @@ const assignmentSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  link: {
+    type: String,
+    required: false
+  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -213,7 +217,7 @@ assignmentSchema.statics.getStats = async function(userId, userRole) {
     
     return stats;
   } catch (error) {
-    console.error('Error getting assignment stats:', error);
+    logger.error('Error getting assignment stats:', error);
     throw error;
   }
 };

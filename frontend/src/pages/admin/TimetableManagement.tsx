@@ -8,8 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
-import { CalendarDays, Plus, Edit, Trash2, Clock, MapPin, ArrowLeft } from "lucide-react";
+import { CalendarDays, Plus, Edit, Trash2, Clock, MapPin, ArrowLeft, Search } from "lucide-react";
+import { motion } from "framer-motion";
 import api from '@/api/axios';
+import Loader from '@/components/Loader';
+import logger from '@/utils/logger';
 
 interface Schedule {
   id: string;
@@ -45,6 +48,7 @@ const TimetableManagement = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [scheduleToDelete, setScheduleToDelete] = useState<Schedule | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -66,12 +70,24 @@ const TimetableManagement = () => {
     fetchSchedules();
     fetchClasses();
     fetchTeachers();
-  }, []);
+  }, [searchQuery]);
 
   const fetchSchedules = async () => {
     try {
       const response = await api.get('/api/schedule');
-      setSchedules((response.data as any)?.schedules || []);
+      let allSchedules = (response.data as any)?.schedules || [];
+
+      // Filter by search
+      if (searchQuery) {
+        allSchedules = allSchedules.filter((schedule: Schedule) =>
+          schedule.className.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          schedule.professor.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          schedule.dayOfWeek.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          schedule.location.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+      }
+
+      setSchedules(allSchedules);
     } catch (error) {
       toast({
         title: "Error",
@@ -88,7 +104,7 @@ const TimetableManagement = () => {
       const response = await api.get('/api/classes');
       setClasses((response.data as any)?.data || []);
     } catch (error) {
-      console.error('Failed to fetch classes:', error);
+      logger.error('Failed to fetch classes:', error);
     }
   };
 
@@ -97,7 +113,7 @@ const TimetableManagement = () => {
       const response = await api.get('/api/users?role=teacher');
       setTeachers((response.data as any)?.data || []);
     } catch (error) {
-      console.error('Failed to fetch teachers:', error);
+      logger.error('Failed to fetch teachers:', error);
     }
   };
 
@@ -205,19 +221,28 @@ const TimetableManagement = () => {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return <Loader text="Loading schedules..." />;
   }
 
   return (
-    <div className="w-full px-6 py-8">
-      <div className="flex justify-between items-center mb-6">
+    <div className="min-h-screen w-full flex flex-col pb-10 sm:pb-0 space-y-6 px-6 py-8 md:px-10 md:py-12">
+      {/* Header Section */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+      >
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate('/admin-dashboard')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Timetable Management</h1>
-            <p className="text-muted-foreground">Create, update, and manage timetables</p>
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
+              Timetable Management
+            </h2>
+            <p className="text-muted-foreground dark:text-gray-400 text-sm sm:text-base">
+              Create, update, and manage timetables
+            </p>
           </div>
         </div>
         <Dialog open={dialogOpen} onOpenChange={(open) => {
@@ -225,7 +250,7 @@ const TimetableManagement = () => {
           if (!open) resetForm();
         }}>
           <DialogTrigger asChild>
-            <Button onClick={() => setEditingSchedule(null)}>
+            <Button onClick={() => setEditingSchedule(null)} className="bg-gradient-to-r from-[#7C3AED] to-[#A855F7] hover:from-[#6D28D9] hover:to-[#9333EA] text-white shadow-lg transition-all duration-300">
               <Plus className="h-4 w-4 mr-2" />
               Create Schedule
             </Button>
@@ -343,61 +368,70 @@ const TimetableManagement = () => {
             </form>
           </DialogContent>
         </Dialog>
-      </div>
+      </motion.div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>All Schedules</CardTitle>
-          <CardDescription>Manage your institution's timetables</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="w-full overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[20%]">Class</TableHead>
-                  <TableHead className="w-[15%]">Professor</TableHead>
-                  <TableHead className="w-[10%]">Day</TableHead>
-                  <TableHead className="w-[20%]">Time</TableHead>
-                  <TableHead className="w-[20%]">Location</TableHead>
-                  <TableHead className="w-[15%] text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {schedules.map((schedule) => (
-                  <TableRow key={schedule.id}>
-                    <TableCell className="font-medium w-[20%]">{schedule.className}</TableCell>
-                    <TableCell className="w-[15%]">{schedule.professor}</TableCell>
-                    <TableCell className="w-[10%]">{schedule.dayOfWeek}</TableCell>
-                    <TableCell className="w-[20%]">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        {schedule.startTime} - {schedule.endTime}
-                      </div>
-                    </TableCell>
-                    <TableCell className="w-[20%]">
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-4 w-4" />
-                        {schedule.location}
-                      </div>
-                    </TableCell>
-                    <TableCell className="w-[15%] text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(schedule)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => confirmDelete(schedule)}>
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Search Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="flex flex-col sm:flex-row gap-4"
+      >
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search schedules by class, professor, day, or location..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 h-12 border-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-slate-800/50 dark:border-slate-600 rounded-2xl"
+          />
+        </div>
+      </motion.div>
+
+      {/* Schedules List */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="space-y-3"
+      >
+        {schedules.map((schedule) => (
+          <Card key={schedule.id} className="hover:shadow-lg transition-all duration-300 hover:scale-[1.01] backdrop-blur-sm bg-white/50 dark:bg-slate-800/50 border-2 dark:border-slate-700">
+            <CardHeader className="py-3">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: schedule.color }} />
+                    <CardTitle className="text-base sm:text-lg font-semibold truncate">{schedule.className}</CardTitle>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-sm text-muted-foreground truncate">{schedule.professor}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">•</span>
+                  <span className="text-xs text-muted-foreground">{schedule.dayOfWeek}</span>
+                  <span className="text-xs text-muted-foreground">•</span>
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    <span className="text-xs text-muted-foreground">{schedule.startTime} - {schedule.endTime}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">•</span>
+                  <div className="flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
+                    <span className="text-xs text-muted-foreground truncate">{schedule.location}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <Button variant="ghost" size="icon" onClick={() => handleEdit(schedule)} className="h-8 w-8">
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => confirmDelete(schedule)} className="h-8 w-8">
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+        ))}
+      </motion.div>
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>

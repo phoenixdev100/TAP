@@ -8,8 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
-import { UserCheck, Calendar, Plus, BarChart3, ArrowLeft } from "lucide-react";
+import { UserCheck, Calendar, Plus, BarChart3, ArrowLeft, Search } from "lucide-react";
+import { motion } from "framer-motion";
 import api from '@/api/axios';
+import Loader from '@/components/Loader';
+import logger from '@/utils/logger';
 
 interface AttendanceRecord {
   _id: string;
@@ -77,7 +80,7 @@ const AttendanceManagement = () => {
       const response = await api.get(`/api/classes/${classId}`);
       return (response.data as any)?.class || (response.data as any)?.data;
     } catch (error) {
-      console.error('Failed to fetch class with students:', error);
+      logger.error('Failed to fetch class with students:', error);
       return null;
     }
   };
@@ -143,19 +146,28 @@ const AttendanceManagement = () => {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return <Loader text="Loading attendance data..." />;
   }
 
   return (
-    <div className="w-full px-6 py-8">
-      <div className="flex justify-between items-center mb-6">
+    <div className="min-h-screen w-full flex flex-col pb-10 sm:pb-0 space-y-6 px-6 py-8 md:px-10 md:py-12">
+      {/* Header Section */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+      >
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate('/admin-dashboard')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Attendance Management</h1>
-            <p className="text-muted-foreground">Take attendance and view reports</p>
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
+              Attendance Management
+            </h2>
+            <p className="text-muted-foreground dark:text-gray-400 text-sm sm:text-base">
+              Take attendance and view reports
+            </p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -168,7 +180,7 @@ const AttendanceManagement = () => {
             }
           }}>
             <DialogTrigger asChild>
-              <Button variant="outline">
+              <Button variant="outline" className="bg-gradient-to-r from-[#7C3AED] to-[#A855F7] hover:from-[#6D28D9] hover:to-[#9333EA] text-white shadow-lg transition-all duration-300 border-0">
                 <Calendar className="h-4 w-4 mr-2" />
                 Mark Attendance
               </Button>
@@ -247,7 +259,7 @@ const AttendanceManagement = () => {
           </Dialog>
           <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline">
+              <Button variant="outline" className="bg-gradient-to-r from-[#7C3AED] to-[#A855F7] hover:from-[#6D28D9] hover:to-[#9333EA] text-white shadow-lg transition-all duration-300 border-0">
                 <BarChart3 className="h-4 w-4 mr-2" />
                 Generate Report
               </Button>
@@ -299,73 +311,68 @@ const AttendanceManagement = () => {
             </DialogContent>
           </Dialog>
         </div>
-      </div>
+      </motion.div>
 
       {attendance.length > 0 && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Attendance Report</CardTitle>
-            <CardDescription>Showing {attendance.length} records</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Class</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {attendance.map((record) => (
-                  <TableRow key={record._id}>
-                    <TableCell className="font-medium">{record.student?.username || 'Unknown'}</TableCell>
-                    <TableCell>{record.className}</TableCell>
-                    <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(record.status)}`}>
-                        {record.status}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="space-y-4"
+        >
+          <div>
+            <h3 className="text-lg font-semibold">Attendance Report</h3>
+            <p className="text-sm text-muted-foreground">Showing {attendance.length} records</p>
+          </div>
+          <Card className="backdrop-blur-sm bg-white/50 dark:bg-slate-800/50 border-2 dark:border-slate-700">
+            <CardContent className="p-0">
+              <div className="w-full overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Student</TableHead>
+                      <TableHead>Class</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {attendance.map((record) => (
+                      <TableRow key={record._id}>
+                        <TableCell className="font-medium">{record.student?.username || 'Unknown'}</TableCell>
+                        <TableCell>{record.className}</TableCell>
+                        <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(record.status)}`}>
+                            {record.status}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>Manage attendance for your classes</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="p-4 border rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <UserCheck className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold">Mark Attendance</h3>
-              </div>
-              <p className="text-sm text-muted-foreground mb-3">Take daily attendance for any class</p>
-              <Button variant="outline" size="sm" onClick={() => setMarkDialogOpen(true)}>
-                Mark Now
-              </Button>
-            </div>
-            <div className="p-4 border rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <BarChart3 className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold">View Reports</h3>
-              </div>
-              <p className="text-sm text-muted-foreground mb-3">Generate attendance reports for analysis</p>
-              <Button variant="outline" size="sm" onClick={() => setReportDialogOpen(true)}>
-                Generate Report
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {attendance.length === 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="text-center py-12"
+        >
+          <UserCheck className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No Attendance Records</h3>
+          <p className="text-sm text-muted-foreground mb-4">Start by marking attendance for your classes</p>
+          <Button onClick={() => setMarkDialogOpen(true)} className="bg-gradient-to-r from-[#7C3AED] to-[#A855F7] hover:from-[#6D28D9] hover:to-[#9333EA] text-white shadow-lg transition-all duration-300">
+            <Calendar className="h-4 w-4 mr-2" />
+            Mark Attendance
+          </Button>
+        </motion.div>
+      )}
     </div>
   );
 };

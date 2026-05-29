@@ -4,14 +4,16 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, Search, Upload, Bookmark, ThumbsUp, Clock, Download, Eye, Star, Filter, Plus } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { FileText, Search, Upload, Bookmark, ThumbsUp, Clock, Download, Eye, Star, Filter, Plus, Edit, Trash2, Link } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion } from "framer-motion";
 import api from "@/api/axios";
+import logger from '@/utils/logger';
 
 interface NotesResponse {
   notes: any[];
@@ -23,7 +25,9 @@ interface MessageResponse {
 }
 
 // Reusable Note Card Component
-const NoteCard = ({ note, onLike, onBookmark, onDownload }) => {
+const NoteCard = ({ note, onLike, onBookmark, onDownload, onEdit, onDelete, user }) => {
+  const isOwner = user?.role !== 'student' && (note.author === user?.userId || note.authorName === user?.username);
+
   return (
     <Card className="group hover:shadow-lg transition-all duration-300 border-2 hover:border-purple-200 dark:hover:border-purple-800 overflow-hidden backdrop-blur-sm bg-white/50 dark:bg-slate-800/50 dark:border-slate-700 rounded-2xl">
       <CardHeader className="pb-3">
@@ -31,11 +35,31 @@ const NoteCard = ({ note, onLike, onBookmark, onDownload }) => {
           <div className="flex-1">
             <CardTitle className="text-lg font-semibold line-clamp-2 group-hover:text-purple-600 transition-colors">
               {note.title}
+              {note.url && (
+                <a
+                  href={note.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  <Link className="h-3 w-3" />
+                </a>
+              )}
             </CardTitle>
             <CardDescription className="mt-1 flex items-center gap-2">
               <Badge variant="secondary" className="text-xs rounded-full">
                 {note.subject}
               </Badge>
+              {note.className && (
+                <Badge variant="outline" className="text-xs rounded-full">
+                  {note.className}
+                </Badge>
+              )}
+              {note.date && (
+                <span className="text-xs text-muted-foreground">
+                  {note.date}
+                </span>
+              )}
               <span className="text-xs text-muted-foreground">
                 {note.pages || 0} pages
               </span>
@@ -83,6 +107,26 @@ const NoteCard = ({ note, onLike, onBookmark, onDownload }) => {
             {note.authorName || note.author?.username || 'Unknown'}
           </span>
           <div className="flex items-center gap-1">
+            {isOwner && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onEdit(note)}
+                  className="h-8 w-8 p-0 hover:text-blue-600 transition-colors"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onDelete(note)}
+                  className="h-8 w-8 p-0 hover:text-red-600 transition-colors"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </>
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -189,7 +233,7 @@ const EmptyState = ({ type, searchQuery, user, onUpload, onBrowseNotes }) => {
 };
 
 // Reusable Tab Content Component
-const TabContent = ({ loading, notes, type, searchQuery, user, onUpload, onLike, onBookmark, onDownload, onBrowseNotes }) => {
+const TabContent = ({ loading, notes, type, searchQuery, user, onUpload, onLike, onBookmark, onDownload, onEdit, onDelete, onBrowseNotes }) => {
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -211,15 +255,59 @@ const TabContent = ({ loading, notes, type, searchQuery, user, onUpload, onLike,
   }
 
   return (
-    <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="space-y-3">
       {notes.map((note) => (
-        <NoteCard
-          key={note._id}
-          note={note}
-          onLike={onLike}
-          onBookmark={onBookmark}
-          onDownload={onDownload}
-        />
+        <Card key={note._id} className="hover:shadow-lg transition-all duration-300 hover:scale-[1.01] backdrop-blur-sm bg-white/50 dark:bg-slate-800/50 border-2 dark:border-slate-700">
+          <CardHeader className="py-3">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  <CardTitle className="text-base sm:text-lg font-semibold truncate">{note.title}</CardTitle>
+                  {note.url && (
+                    <a
+                      href={note.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-xs text-primary hover:underline whitespace-nowrap"
+                    >
+                      <Link className="h-3 w-3" />
+                      Link
+                    </a>
+                  )}
+                </div>
+                <span className="text-xs text-muted-foreground hidden sm:inline">{note.subject}</span>
+                <span className="text-xs text-muted-foreground">•</span>
+                <span className="text-xs text-muted-foreground font-medium">{note.className || '-'}</span>
+                {note.date && (
+                  <>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-muted-foreground">{note.date}</span>
+                  </>
+                )}
+                <span className="text-xs text-muted-foreground">•</span>
+                <span className="text-xs text-muted-foreground">{note.authorName}</span>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className={`px-2 py-0.5 text-xs font-medium rounded-full whitespace-nowrap ${note.isPublic ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-400'}`}>
+                  {note.isPublic ? 'Public' : 'Private'}
+                </span>
+                <Button variant="ghost" size="icon" onClick={() => onDownload(note._id, note.fileName)} className="h-8 w-8">
+                  <Download className="h-4 w-4" />
+                </Button>
+                {(user?.role !== 'student' && (note.author === user?.userId || note.authorName === user?.username)) && (
+                  <>
+                    <Button variant="ghost" size="icon" onClick={() => onEdit(note)} className="h-8 w-8">
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => onDelete(note)} className="h-8 w-8">
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
       ))}
     </div>
   );
@@ -231,15 +319,22 @@ const Notes = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [notes, setNotes] = useState([]);
+  const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editingNote, setEditingNote] = useState(null);
+  const [noteToDelete, setNoteToDelete] = useState(null);
   const [uploadForm, setUploadForm] = useState({
     title: "",
     subject: "",
     description: "",
-    tags: "",
-    isPublic: true,
-    file: null
+    classId: "",
+    className: "",
+    url: "",
+    date: "",
+    isPublic: true
   });
   const [uploading, setUploading] = useState(false);
 
@@ -266,7 +361,7 @@ const Notes = () => {
         });
       }
     } catch (error) {
-      console.error('Error fetching notes:', error);
+      logger.error('Error fetching notes:', error);
       toast({
         title: "Error",
         description: "Failed to connect to server",
@@ -277,13 +372,132 @@ const Notes = () => {
     }
   };
 
+  const fetchClasses = async () => {
+    try {
+      const response = await api.get('/api/classes');
+      setClasses((response.data as any)?.data || []);
+    } catch (error) {
+      logger.error('Failed to fetch classes:', error);
+    }
+  };
+
   // Fetch notes on component mount and when filters change
   useEffect(() => {
     fetchNotes();
+    fetchClasses();
   }, [selectedCategory, searchQuery]);
 
   const handleUpload = () => {
     setUploadDialogOpen(true);
+  };
+
+  const handleEdit = (note) => {
+    setEditingNote(note);
+    const matchedClass = classes.find(c => c._id === note.classId);
+    setUploadForm({
+      title: note.title,
+      subject: note.subject,
+      description: note.description,
+      classId: note.classId || '',
+      className: note.className || matchedClass ? `${matchedClass.code} - ${matchedClass.name}` : '',
+      url: note.url || '',
+      date: note.date || '',
+      isPublic: note.isPublic
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleDelete = (note) => {
+    setNoteToDelete(note);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!noteToDelete) return;
+
+    try {
+      await api.delete(`/api/notes/${noteToDelete._id}`);
+      toast({
+        title: "Success",
+        description: "Note deleted successfully",
+        duration: 3000,
+      });
+      setDeleteDialogOpen(false);
+      setNoteToDelete(null);
+      fetchNotes();
+    } catch (error) {
+      logger.error('Error deleting note:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete note",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!uploadForm.title || !uploadForm.subject || !uploadForm.description) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setUploading(true);
+      const data = {
+        title: uploadForm.title,
+        subject: uploadForm.subject,
+        description: uploadForm.description,
+        classId: uploadForm.classId === 'none' ? '' : uploadForm.classId,
+        className: uploadForm.className,
+        url: uploadForm.url,
+        date: uploadForm.date,
+        isPublic: uploadForm.isPublic
+      };
+
+      const response = await api.put(`/api/notes/${editingNote._id}`, data);
+
+      if (response.data) {
+        toast({
+          title: "Success",
+          description: "Note updated successfully",
+          duration: 3000,
+        });
+        setEditDialogOpen(false);
+        setEditingNote(null);
+        setUploadForm({
+          title: "",
+          subject: "",
+          description: "",
+          classId: "",
+          className: "",
+          url: "",
+          date: "",
+          isPublic: true
+        });
+        fetchNotes();
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to update note",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      logger.error('Error updating note:', error);
+      toast({
+        title: "Error",
+        description: "Failed to connect to server",
+        variant: "destructive"
+      });
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleBookmark = async (noteId: string) => {
@@ -304,7 +518,7 @@ const Notes = () => {
         });
       }
     } catch (error) {
-      console.error('Error updating bookmark:', error);
+      logger.error('Error updating bookmark:', error);
       toast({
         title: "Error",
         description: "Failed to connect to server",
@@ -331,7 +545,7 @@ const Notes = () => {
         });
       }
     } catch (error) {
-      console.error('Error updating like:', error);
+      logger.error('Error updating like:', error);
       toast({
         title: "Error",
         description: "Failed to connect to server",
@@ -363,7 +577,7 @@ const Notes = () => {
       });
       fetchNotes();
     } catch (error) {
-      console.error('Error downloading note:', error);
+      logger.error('Error downloading note:', error);
       toast({
         title: "Error",
         description: "Failed to connect to server",
@@ -374,15 +588,6 @@ const Notes = () => {
 
   const handleFileUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!uploadForm.file) {
-      toast({
-        title: "Error",
-        description: "Please select a file to upload",
-        variant: "destructive"
-      });
-      return;
-    }
 
     if (!uploadForm.title || !uploadForm.subject || !uploadForm.description) {
       toast({
@@ -395,24 +600,23 @@ const Notes = () => {
 
     try {
       setUploading(true);
-      const formData = new FormData();
-      formData.append('file', uploadForm.file);
-      formData.append('title', uploadForm.title);
-      formData.append('subject', uploadForm.subject);
-      formData.append('description', uploadForm.description);
-      formData.append('tags', uploadForm.tags);
-      formData.append('isPublic', uploadForm.isPublic.toString());
+      const data = {
+        title: uploadForm.title,
+        subject: uploadForm.subject,
+        description: uploadForm.description,
+        classId: uploadForm.classId === 'none' ? '' : uploadForm.classId,
+        className: uploadForm.className,
+        url: uploadForm.url,
+        date: uploadForm.date,
+        isPublic: uploadForm.isPublic
+      };
 
-      const response = await api.post('/api/notes/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+      const response = await api.post('/api/notes', data);
 
       if (response.data) {
         toast({
           title: "Success",
-          description: "Note uploaded successfully",
+          description: "Note created successfully",
           duration: 3000,
         });
         setUploadDialogOpen(false);
@@ -420,20 +624,22 @@ const Notes = () => {
           title: "",
           subject: "",
           description: "",
-          tags: "",
-          isPublic: true,
-          file: null
+          classId: "",
+          className: "",
+          url: "",
+          date: "",
+          isPublic: true
         });
         fetchNotes();
       } else {
         toast({
           title: "Error",
-          description: "Failed to upload note",
+          description: "Failed to create note",
           variant: "destructive"
         });
       }
     } catch (error) {
-      console.error('Error uploading note:', error);
+      logger.error('Error creating note:', error);
       toast({
         title: "Error",
         description: "Failed to connect to server",
@@ -550,6 +756,8 @@ const Notes = () => {
             onLike={handleLike}
             onBookmark={handleBookmark}
             onDownload={handleDownload}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
             onBrowseNotes={() => setSelectedCategory('all')}
             />
           </motion.div>
@@ -571,6 +779,8 @@ const Notes = () => {
             onLike={handleLike}
             onBookmark={handleBookmark}
             onDownload={handleDownload}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
             onBrowseNotes={() => setSelectedCategory('all')}
             />
           </motion.div>
@@ -592,6 +802,8 @@ const Notes = () => {
             onLike={handleLike}
             onBookmark={handleBookmark}
             onDownload={handleDownload}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
             onBrowseNotes={() => setSelectedCategory('all')}
             />
           </motion.div>
@@ -613,6 +825,8 @@ const Notes = () => {
             onLike={handleLike}
             onBookmark={handleBookmark}
             onDownload={handleDownload}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
             onBrowseNotes={() => setSelectedCategory('all')}
             />
           </motion.div>
@@ -667,43 +881,53 @@ const Notes = () => {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="tags">Tags (comma-separated)</Label>
-              <Input
-                id="tags"
-                placeholder="e.g., calculus, mathematics, exam"
-                value={uploadForm.tags}
-                onChange={(e) => setUploadForm({ ...uploadForm, tags: e.target.value })}
-                className="border-2 focus:ring-2 focus:ring-purple-500 rounded-2xl"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="class">Assign to Class (Optional)</Label>
+                <Select value={uploadForm.classId} onValueChange={(value) => {
+                  const selectedClass = classes.find(c => c._id === value);
+                  setUploadForm(prev => ({
+                    ...prev,
+                    classId: value,
+                    className: selectedClass ? `${selectedClass.code} - ${selectedClass.name}` : '',
+                    url: prev.url,
+                    date: prev.date
+                  }));
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a class" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No class</SelectItem>
+                    {classes.map((cls) => (
+                      <SelectItem key={cls._id} value={cls._id}>
+                        {cls.code} - {cls.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="date">Date (Optional)</Label>
+                <Input
+                  id="date"
+                  type="date"
+                  value={uploadForm.date}
+                  onChange={(e) => setUploadForm({ ...uploadForm, date: e.target.value })}
+                  className="border-2 focus:ring-2 focus:ring-purple-500 rounded-2xl"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="file">File *</Label>
-              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl p-6 text-center hover:border-purple-400 dark:hover:border-purple-600 transition-colors">
-                <input
-                  type="file"
-                  id="file"
-                  accept=".pdf,.doc,.docx,.txt"
-                  onChange={(e) => setUploadForm({ ...uploadForm, file: e.target.files?.[0] || null })}
-                  className="hidden"
-                />
-                <label htmlFor="file" className="cursor-pointer">
-                  {uploadForm.file ? (
-                    <div className="space-y-2">
-                      <FileText className="mx-auto h-8 w-8 text-purple-600" />
-                      <p className="text-sm font-medium">{uploadForm.file.name}</p>
-                      <p className="text-xs text-muted-foreground">{(uploadForm.file.size / 1024 / 1024).toFixed(2)} MB</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <Upload className="mx-auto h-8 w-8 text-gray-400" />
-                      <p className="text-sm font-medium">Click to upload or drag and drop</p>
-                      <p className="text-xs text-muted-foreground">PDF, Word, or text files (MAX. 10MB)</p>
-                    </div>
-                  )}
-                </label>
-              </div>
+              <Label htmlFor="url">URL (Optional)</Label>
+              <Input
+                id="url"
+                placeholder="https://..."
+                value={uploadForm.url}
+                onChange={(e) => setUploadForm({ ...uploadForm, url: e.target.value })}
+                className="border-2 focus:ring-2 focus:ring-purple-500 rounded-2xl"
+              />
             </div>
 
             <div className="flex items-center space-x-2">
@@ -736,17 +960,185 @@ const Notes = () => {
                 {uploading ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Uploading...
+                    Creating...
                   </>
                 ) : (
                   <>
                     <Plus className="h-4 w-4 mr-2" />
-                    Upload Note
+                    Create Note
                   </>
                 )}
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] max-w-[95vw] border-0 shadow-2xl bg-gradient-to-b from-background to-background/95 backdrop-blur-xl rounded-3xl">
+          <DialogHeader className="pb-4">
+            <DialogTitle className="text-lg sm:text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+              Edit Note
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUpdate} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-title">Note Title *</Label>
+                <Input
+                  id="edit-title"
+                  placeholder="Enter note title"
+                  value={uploadForm.title}
+                  onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })}
+                  required
+                  className="border-2 focus:ring-2 focus:ring-purple-500 rounded-2xl"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-subject">Subject *</Label>
+                <Input
+                  id="edit-subject"
+                  placeholder="e.g., Mathematics, Computer Science"
+                  value={uploadForm.subject}
+                  onChange={(e) => setUploadForm({ ...uploadForm, subject: e.target.value })}
+                  required
+                  className="border-2 focus:ring-2 focus:ring-purple-500 rounded-2xl"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description *</Label>
+              <Textarea
+                id="edit-description"
+                placeholder="Describe your note content..."
+                value={uploadForm.description}
+                onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })}
+                required
+                rows={3}
+                className="border-2 focus:ring-2 focus:ring-purple-500 resize-none rounded-2xl"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-class">Assign to Class (Optional)</Label>
+                <Select value={uploadForm.classId} onValueChange={(value) => {
+                  const selectedClass = classes.find(c => c._id === value);
+                  setUploadForm(prev => ({
+                    ...prev,
+                    classId: value,
+                    className: selectedClass ? `${selectedClass.code} - ${selectedClass.name}` : '',
+                    url: prev.url,
+                    date: prev.date
+                  }));
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a class" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No class</SelectItem>
+                    {classes.map((cls) => (
+                      <SelectItem key={cls._id} value={cls._id}>
+                        {cls.code} - {cls.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-date">Date (Optional)</Label>
+                <Input
+                  id="edit-date"
+                  type="date"
+                  value={uploadForm.date}
+                  onChange={(e) => setUploadForm({ ...uploadForm, date: e.target.value })}
+                  className="border-2 focus:ring-2 focus:ring-purple-500 rounded-2xl"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-url">URL (Optional)</Label>
+              <Input
+                id="edit-url"
+                placeholder="https://..."
+                value={uploadForm.url}
+                onChange={(e) => setUploadForm({ ...uploadForm, url: e.target.value })}
+                className="border-2 focus:ring-2 focus:ring-purple-500 rounded-2xl"
+              />
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="edit-isPublic"
+                checked={uploadForm.isPublic}
+                onChange={(e) => setUploadForm({ ...uploadForm, isPublic: e.target.checked })}
+                className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+              />
+              <Label htmlFor="edit-isPublic" className="text-sm font-medium">
+                Make this note public (visible to all users)
+              </Label>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditDialogOpen(false)}
+                className="border-2 hover:border-[#7C3AED] hover:text-[#7C3AED] transition-colors rounded-2xl"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={uploading}
+                className="bg-gradient-to-r from-[#7C3AED] to-[#A855F7] hover:from-[#6D28D9] hover:to-[#9333EA] text-white shadow-lg transition-all duration-300 rounded-2xl"
+              >
+                {uploading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Update Note
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[400px] border-0 shadow-2xl bg-gradient-to-b from-background to-background/95 backdrop-blur-xl rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold">Delete Note</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this note "{noteToDelete?.title}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              className="border-2 hover:border-[#7C3AED] hover:text-[#7C3AED] transition-colors rounded-2xl"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              className="rounded-2xl"
+            >
+              Delete
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

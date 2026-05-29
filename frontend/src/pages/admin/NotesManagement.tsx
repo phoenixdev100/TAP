@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
-import { FileText, Plus, Edit, Trash2, Download, Eye, ArrowLeft } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, ArrowLeft, Link, FileText, Search, Bookmark, ThumbsUp, Clock, Download, Star, Upload, Lock } from "lucide-react";
+import { motion } from "framer-motion";
 import api from '@/api/axios';
+import Loader from '@/components/Loader';
+import logger from '@/utils/logger';
 
 interface Note {
   _id: string;
@@ -17,17 +22,18 @@ interface Note {
   subject: string;
   description: string;
   classId?: string;
+  className?: string;
+  url?: string;
+  date?: string;
   author: {
     _id: string;
     username: string;
   };
   authorName: string;
   uploadDate: string;
-  rating: number;
-  downloads: number;
   pages: number;
-  fileType: string;
-  fileName: string;
+  fileType?: string;
+  fileName?: string;
   tags: string[];
   isPublic: boolean;
 }
@@ -47,6 +53,8 @@ const NotesManagement = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [noteToDelete, setNoteToDelete] = useState<Note | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -54,18 +62,45 @@ const NotesManagement = () => {
     subject: '',
     description: '',
     classId: '',
+    className: '',
+    url: '',
+    date: '',
     isPublic: true
   });
+
+  const categories = [
+    { id: "all", label: "All Notes", icon: FileText },
+    { id: "public", label: "Public", icon: Eye },
+    { id: "private", label: "Private", icon: Lock },
+  ];
 
   useEffect(() => {
     fetchNotes();
     fetchClasses();
-  }, []);
+  }, [selectedCategory, searchQuery]);
 
   const fetchNotes = async () => {
     try {
       const response = await api.get('/api/notes');
-      setNotes((response.data as any)?.notes || (response.data as any)?.data || []);
+      let allNotes = (response.data as any)?.notes || (response.data as any)?.data || [];
+
+      // Filter by category
+      if (selectedCategory === 'public') {
+        allNotes = allNotes.filter((note: Note) => note.isPublic);
+      } else if (selectedCategory === 'private') {
+        allNotes = allNotes.filter((note: Note) => !note.isPublic);
+      }
+
+      // Filter by search
+      if (searchQuery) {
+        allNotes = allNotes.filter((note: Note) =>
+          note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          note.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          note.description.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+      }
+
+      setNotes(allNotes);
     } catch (error) {
       toast({
         title: "Error",
@@ -82,7 +117,7 @@ const NotesManagement = () => {
       const response = await api.get('/api/classes');
       setClasses((response.data as any)?.data || []);
     } catch (error) {
-      console.error('Failed to fetch classes:', error);
+      logger.error('Failed to fetch classes:', error);
     }
   };
 
@@ -121,11 +156,15 @@ const NotesManagement = () => {
 
   const handleEdit = (note: Note) => {
     setEditingNote(note);
+    const matchedClass = classes.find(c => c._id === note.classId);
     setFormData({
       title: note.title,
       subject: note.subject,
       description: note.description,
       classId: note.classId || '',
+      className: note.className || matchedClass ? `${matchedClass.code} - ${matchedClass.name}` : '',
+      url: note.url || '',
+      date: note.date || '',
       isPublic: note.isPublic
     });
     setDialogOpen(true);
@@ -180,25 +219,37 @@ const NotesManagement = () => {
       subject: '',
       description: '',
       classId: '',
+      className: '',
+      url: '',
+      date: '',
       isPublic: true
     });
     setEditingNote(null);
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return <Loader text="Loading notes..." />;
   }
 
   return (
-    <div className="w-full px-6 py-8">
-      <div className="flex justify-between items-center mb-6">
+    <div className="min-h-screen w-full flex flex-col pb-10 sm:pb-0 space-y-6 px-6 py-8 md:px-10 md:py-12">
+      {/* Header Section */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+      >
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate('/admin-dashboard')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Notes Management</h1>
-            <p className="text-muted-foreground">Create and manage study notes</p>
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
+              Notes Management
+            </h2>
+            <p className="text-muted-foreground dark:text-gray-400 text-sm sm:text-base">
+              Create and manage study notes
+            </p>
           </div>
         </div>
         <Dialog open={dialogOpen} onOpenChange={(open) => {
@@ -206,7 +257,7 @@ const NotesManagement = () => {
           if (!open) resetForm();
         }}>
           <DialogTrigger asChild>
-            <Button onClick={() => setEditingNote(null)}>
+            <Button onClick={() => setEditingNote(null)} className="bg-gradient-to-r from-[#7C3AED] to-[#A855F7] hover:from-[#6D28D9] hover:to-[#9333EA] text-white shadow-lg transition-all duration-300">
               <Plus className="h-4 w-4 mr-2" />
               Create Note
             </Button>
@@ -219,7 +270,7 @@ const NotesManagement = () => {
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit}>
-              <div className="grid gap-4 py-4">
+              <div className="grid gap-3 py-4">
                 <div className="grid gap-2">
                   <Label htmlFor="title">Title</Label>
                   <Input
@@ -229,18 +280,38 @@ const NotesManagement = () => {
                     required
                   />
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="subject">Subject</Label>
-                  <Input
-                    id="subject"
-                    value={formData.subject}
-                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                    required
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-2">
+                    <Label htmlFor="subject">Subject</Label>
+                    <Input
+                      id="subject"
+                      value={formData.subject}
+                      onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="date">Date</Label>
+                    <Input
+                      id="date"
+                      type="date"
+                      value={formData.date}
+                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                    />
+                  </div>
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="class">Assign to Class (Optional)</Label>
-                  <Select value={formData.classId} onValueChange={(value) => setFormData({ ...formData, classId: value })}>
+                  <Select value={formData.classId} onValueChange={(value) => {
+                    const selectedClass = classes.find(c => c._id === value);
+                    setFormData(prev => ({
+                      ...prev,
+                      classId: value,
+                      className: selectedClass ? `${selectedClass.code} - ${selectedClass.name}` : '',
+                      url: prev.url,
+                      date: prev.date
+                    }));
+                  }}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a class" />
                     </SelectTrigger>
@@ -253,6 +324,15 @@ const NotesManagement = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="url">URL (Optional)</Label>
+                  <Input
+                    id="url"
+                    value={formData.url}
+                    onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                    placeholder="https://..."
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="description">Description</Label>
@@ -280,81 +360,110 @@ const NotesManagement = () => {
             </form>
           </DialogContent>
         </Dialog>
-      </div>
+      </motion.div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>All Notes</CardTitle>
-          <CardDescription>Manage study materials and resources</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="w-full overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[18%]">Title</TableHead>
-                  <TableHead className="w-[12%]">Subject</TableHead>
-                  <TableHead className="w-[12%]">Author</TableHead>
-                  <TableHead className="w-[10%]">Class</TableHead>
-                  <TableHead className="w-[10%]">Downloads</TableHead>
-                  <TableHead className="w-[10%]">Rating</TableHead>
-                  <TableHead className="w-[10%]">Status</TableHead>
-                  <TableHead className="w-[18%] text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+      {/* Search and Filter Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="flex flex-col sm:flex-row gap-4"
+      >
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search notes, subjects, or materials..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 h-12 border-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 dark:bg-slate-800/50 dark:border-slate-600 rounded-2xl"
+          />
+        </div>
+      </motion.div>
+
+      {/* Category Tabs */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full">
+          <TabsList className="grid w-full grid-cols-3 h-auto p-1 bg-muted dark:bg-slate-800 rounded-2xl">
+            {categories.map((category) => {
+              const Icon = category.icon;
+              return (
+                <TabsTrigger
+                  key={category.id}
+                  value={category.id}
+                  className="flex items-center gap-2 py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#7C3AED] data-[state=active]:to-[#A855F7] data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 rounded-xl"
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{category.label}</span>
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+
+          <TabsContent value={selectedCategory} className="pt-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <div className="space-y-3">
                 {notes.map((note) => (
-                  <TableRow key={note._id}>
-                    <TableCell className="font-medium w-[18%]">{note.title}</TableCell>
-                    <TableCell className="w-[12%]">{note.subject}</TableCell>
-                    <TableCell className="w-[12%]">{note.authorName}</TableCell>
-                    <TableCell className="w-[10%]">
-                      {note.classId ? (
-                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
-                          Assigned
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="w-[10%]">
-                      <div className="flex items-center gap-1">
-                        <Download className="h-4 w-4" />
-                        {note.downloads}
+                  <Card key={note._id} className="hover:shadow-lg transition-all duration-300 hover:scale-[1.01] backdrop-blur-sm bg-white/50 dark:bg-slate-800/50 border-2 dark:border-slate-700">
+                    <CardHeader className="py-3">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <CardTitle className="text-base sm:text-lg font-semibold truncate">{note.title}</CardTitle>
+                            {note.url && (
+                              <a
+                                href={note.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-xs text-primary hover:underline whitespace-nowrap"
+                              >
+                                <Link className="h-3 w-3" />
+                                Link
+                              </a>
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground hidden sm:inline">{note.subject}</span>
+                          <span className="text-xs text-muted-foreground">•</span>
+                          <span className="text-xs text-muted-foreground font-medium">{note.className || '-'}</span>
+                          {note.date && (
+                            <>
+                              <span className="text-xs text-muted-foreground">•</span>
+                              <span className="text-xs text-muted-foreground">{note.date}</span>
+                            </>
+                          )}
+                          <span className="text-xs text-muted-foreground">•</span>
+                          <span className="text-xs text-muted-foreground">{note.authorName}</span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className={`px-2 py-0.5 text-xs font-medium rounded-full whitespace-nowrap ${note.isPublic ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-400'}`}>
+                            {note.isPublic ? 'Public' : 'Private'}
+                          </span>
+                          <Button variant="ghost" size="icon" onClick={() => handleTogglePublic(note)} className="h-8 w-8">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(note)} className="h-8 w-8">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => confirmDelete(note)} className="h-8 w-8">
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
                       </div>
-                    </TableCell>
-                    <TableCell className="w-[10%]">
-                      <div className="flex items-center">
-                        <span className="mr-1">{note.rating}</span>
-                        <span className="text-yellow-500">★</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="w-[10%]">
-                      <span className={`px-2 py-1 rounded-full text-xs ${note.isPublic ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                        }`}>
-                        {note.isPublic ? 'Public' : 'Private'}
-                      </span>
-                    </TableCell>
-                    <TableCell className="w-[18%] text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => handleTogglePublic(note)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(note)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => confirmDelete(note)}>
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                    </CardHeader>
+                  </Card>
                 ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+              </div>
+            </motion.div>
+          </TabsContent>
+        </Tabs>
+      </motion.div>
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>

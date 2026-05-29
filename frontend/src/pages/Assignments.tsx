@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import logger from "@/utils/logger";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,6 +12,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -34,7 +45,8 @@ import {
   Eye,
   Star,
   MessageSquare,
-  User
+  User,
+  Link
 } from 'lucide-react';
 import { format } from "date-fns";
 import { motion } from "framer-motion";
@@ -45,6 +57,7 @@ interface Assignment {
   description: string;
   dueDate: string;
   className: string;
+  link?: string;
   status?: string;
   score?: number | null;
   submittedAt?: string;
@@ -77,17 +90,22 @@ interface ApiResponse<T> {
 const Assignments = () => {
   const { user } = useAuth();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
   const [isGradeDialogOpen, setIsGradeDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+  const [assignmentToDelete, setAssignmentToDelete] = useState<Assignment | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     dueDate: '',
     className: '',
+    classId: '',
+    link: '',
     assignedTo: [] as string[]
   });
   const [submissionData, setSubmissionData] = useState({
@@ -120,7 +138,7 @@ const Assignments = () => {
         throw new Error(response.data.message || 'Failed to fetch assignments');
       }
     } catch (error: any) {
-      console.error('Error fetching assignments:', error);
+      logger.error('Error fetching assignments:', error);
       toast({
         title: "Error",
         description: error.response?.data?.message || error.message || "Failed to fetch assignments",
@@ -130,8 +148,18 @@ const Assignments = () => {
     }
   };
 
+  const fetchClasses = async () => {
+    try {
+      const response = await api.get('/api/classes');
+      setClasses((response.data as any)?.data || []);
+    } catch (error) {
+      logger.error('Failed to fetch classes:', error);
+    }
+  };
+
   useEffect(() => {
     fetchAssignments();
+    fetchClasses();
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -186,6 +214,8 @@ const Assignments = () => {
           description: '',
           dueDate: '',
           className: '',
+          classId: '',
+          link: '',
           assignedTo: []
         });
         fetchAssignments();
@@ -193,7 +223,7 @@ const Assignments = () => {
         throw new Error(response.data.message || 'Failed to create assignment');
       }
     } catch (error: any) {
-      console.error('Error creating assignment:', error);
+      logger.error('Error creating assignment:', error);
       toast({
         title: "Error",
         description: error.response?.data?.message || error.message || "Failed to create assignment",
@@ -227,7 +257,7 @@ const Assignments = () => {
         throw new Error(response.data.message || 'Failed to update assignment');
       }
     } catch (error: any) {
-      console.error('Error updating assignment:', error);
+      logger.error('Error updating assignment:', error);
       toast({
         title: "Error",
         description: error.response?.data?.message || error.message || "Failed to update assignment",
@@ -240,10 +270,18 @@ const Assignments = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this assignment?')) return;
+    const assignment = assignments.find(a => a.id === id);
+    if (assignment) {
+      setAssignmentToDelete(assignment);
+      setIsDeleteDialogOpen(true);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!assignmentToDelete) return;
 
     try {
-      const response = await api.delete<ApiResponse<Assignment>>(`/api/assignments/${id}`);
+      const response = await api.delete<ApiResponse<Assignment>>(`/api/assignments/${assignmentToDelete.id}`);
 
       if (response.data.success) {
         toast({
@@ -251,12 +289,14 @@ const Assignments = () => {
           description: "Assignment deleted successfully",
           duration: 5000,
         });
+        setIsDeleteDialogOpen(false);
+        setAssignmentToDelete(null);
         fetchAssignments();
       } else {
         throw new Error(response.data.message || 'Failed to delete assignment');
       }
     } catch (error: any) {
-      console.error('Error deleting assignment:', error);
+      logger.error('Error deleting assignment:', error);
       toast({
         title: "Error",
         description: error.response?.data?.message || error.message || "Failed to delete assignment",
@@ -294,7 +334,7 @@ const Assignments = () => {
         throw new Error((response.data as any).message || 'Failed to submit assignment');
       }
     } catch (error: any) {
-      console.error('Error submitting assignment:', error);
+      logger.error('Error submitting assignment:', error);
       toast({
         title: "Error",
         description: error.response?.data?.message || error.message || "Failed to submit assignment",
@@ -330,7 +370,7 @@ const Assignments = () => {
         throw new Error((response.data as any).message || 'Failed to grade submission');
       }
     } catch (error: any) {
-      console.error('Error grading submission:', error);
+      logger.error('Error grading submission:', error);
       toast({
         title: "Error",
         description: error.response?.data?.message || error.message || "Failed to grade submission",
@@ -372,11 +412,14 @@ const Assignments = () => {
 
   const openEditDialog = (assignment: Assignment) => {
     setSelectedAssignment(assignment);
+    const matchedClass = classes.find(c => `${c.code} - ${c.name}` === assignment.className);
     setFormData({
       title: assignment.title,
       description: assignment.description,
       dueDate: assignment.dueDate,
       className: assignment.className,
+      classId: matchedClass?._id || '',
+      link: assignment.link || '',
       assignedTo: []
     });
     setIsEditDialogOpen(true);
@@ -412,7 +455,7 @@ const Assignments = () => {
   const stats = getAssignmentStats();
 
   return (
-    <div className="min-h-screen w-full flex flex-col pb-10 sm:pb-0 space-y-6">
+    <div className="min-h-screen w-full flex flex-col pb-10 sm:pb-0 space-y-6 px-6 py-8 md:px-10 md:py-12">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -470,12 +513,31 @@ const Assignments = () => {
                   required
                   className="border-2 focus:ring-2 focus:ring-purple-500"
                 />
+                <Select value={formData.classId} onValueChange={(value) => {
+                  const selectedClass = classes.find(c => c._id === value);
+                  setFormData(prev => ({
+                    ...prev,
+                    classId: value,
+                    className: selectedClass ? `${selectedClass.code} - ${selectedClass.name}` : '',
+                    link: prev.link
+                  }));
+                }}>
+                  <SelectTrigger className="border-2 focus:ring-2 focus:ring-purple-500">
+                    <SelectValue placeholder="Select a class" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {classes.map((cls) => (
+                      <SelectItem key={cls._id} value={cls._id}>
+                        {cls.code} - {cls.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Input
-                  placeholder="Class Name"
-                  name="className"
-                  value={formData.className}
+                  placeholder="Drive Link (optional)"
+                  name="link"
+                  value={formData.link}
                   onChange={handleInputChange}
-                  required
                   className="border-2 focus:ring-2 focus:ring-purple-500"
                 />
                 <Button type="submit" disabled={isLoading} className="w-full bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600">
@@ -574,74 +636,74 @@ const Assignments = () => {
               transition={{ delay: index * 0.05 }}
             >
               <Card className="hover:shadow-lg transition-all duration-300 hover:scale-[1.01] backdrop-blur-sm bg-white/50 dark:bg-slate-800/50 border-2 dark:border-slate-700">
-              <CardHeader className="pb-3 sm:pb-4">
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
-                  <div className="space-y-2 flex-1">
-                    <div className="flex items-center gap-2">
-                      <CardTitle className="text-lg sm:text-xl">{assignment.title}</CardTitle>
-                      {assignment.status === 'completed' && (
-                        <span className="px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">
-                          Submitted
-                        </span>
-                      )}
-                      {assignment.status === 'pending' && new Date(assignment.dueDate) < new Date() && (
-                        <span className="px-2 py-0.5 text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full">
-                          Overdue
-                        </span>
-                      )}
-                    </div>
-                    <CardDescription className="text-sm sm:text-base">{assignment.description}</CardDescription>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
-                      <span className="font-medium">{assignment.className}</span>
-                      <span>Due: {format(new Date(assignment.dueDate), 'MMM dd, yyyy')}</span>
-                      {assignment.teacher && <span>Teacher: {assignment.teacher}</span>}
-                    </div>
+              <CardHeader className="py-3">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <CardTitle className="text-base sm:text-lg font-semibold truncate">{assignment.title}</CardTitle>
+                    {assignment.status === 'completed' && (
+                      <span className="px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full whitespace-nowrap">
+                        Submitted
+                      </span>
+                    )}
+                    {assignment.status === 'pending' && new Date(assignment.dueDate) < new Date() && (
+                      <span className="px-2 py-0.5 text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full whitespace-nowrap">
+                        Overdue
+                      </span>
+                    )}
+                    {assignment.link && (
+                      <a
+                        href={assignment.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-xs text-primary hover:underline whitespace-nowrap"
+                      >
+                        <Link className="h-3 w-3" />
+                        Link
+                      </a>
+                    )}
+                    <span className="text-xs text-muted-foreground hidden sm:inline">{assignment.description}</span>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-muted-foreground font-medium">{assignment.className}</span>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-muted-foreground">Due: {format(new Date(assignment.dueDate), 'MMM dd, yyyy')}</span>
                   </div>
-                  <div className="flex flex-row sm:flex-col gap-2 sm:gap-2">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     {user?.role === 'student' ? (
                       <>
                         <Button
                           variant="outline"
-                          size="sm"
+                          size="icon"
                           onClick={() => openSubmitDialog(assignment)}
                           disabled={assignment.status === 'completed'}
-                          className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
+                          className="h-8 w-8"
                         >
-                          <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
-                          <span className="hidden sm:inline">{assignment.status === 'completed' ? 'Submitted' : 'Submit'}</span>
-                          <span className="sm:hidden">{assignment.status === 'completed' ? 'Done' : 'Sub'}</span>
+                          <Upload className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
-                          size="sm"
-                          className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
+                          size="icon"
+                          className="h-8 w-8"
                         >
-                          <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
-                          <span className="hidden sm:inline">View</span>
-                          <span className="sm:hidden">👁</span>
+                          <Eye className="h-4 w-4" />
                         </Button>
                       </>
                     ) : (
                       <>
                         <Button
                           variant="outline"
-                          size="sm"
+                          size="icon"
                           onClick={() => openEditDialog(assignment)}
-                          className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
+                          className="h-8 w-8"
                         >
-                          <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
-                          <span className="hidden sm:inline">Edit</span>
-                          <span className="sm:hidden">✏</span>
+                          <Edit className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="destructive"
-                          size="sm"
+                          size="icon"
                           onClick={() => handleDelete(assignment.id)}
-                          className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
+                          className="h-8 w-8"
                         >
-                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                          <span className="hidden sm:inline">Delete</span>
-                          <span className="sm:hidden">🗑</span>
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </>
                     )}
@@ -750,12 +812,31 @@ const Assignments = () => {
               required
               className="border-2 focus:ring-2 focus:ring-purple-500"
             />
+            <Select value={formData.classId} onValueChange={(value) => {
+              const selectedClass = classes.find(c => c._id === value);
+              setFormData(prev => ({
+                ...prev,
+                classId: value,
+                className: selectedClass ? `${selectedClass.code} - ${selectedClass.name}` : '',
+                link: prev.link
+              }));
+            }}>
+              <SelectTrigger className="border-2 focus:ring-2 focus:ring-purple-500">
+                <SelectValue placeholder="Select a class" />
+              </SelectTrigger>
+              <SelectContent>
+                {classes.map((cls) => (
+                  <SelectItem key={cls._id} value={cls._id}>
+                    {cls.code} - {cls.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Input
-              placeholder="Class Name"
-              name="className"
-              value={formData.className}
+              placeholder="Drive Link (optional)"
+              name="link"
+              value={formData.link}
               onChange={handleInputChange}
-              required
               className="border-2 focus:ring-2 focus:ring-purple-500"
             />
             <Button type="submit" disabled={isLoading} className="w-full bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600">
@@ -840,6 +921,24 @@ const Assignments = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Assignment</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{assignmentToDelete?.title}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

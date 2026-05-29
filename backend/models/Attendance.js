@@ -154,7 +154,7 @@ attendanceSchema.statics.getStats = async function(userId, userRole) {
     
     return stats;
   } catch (error) {
-    console.error('Error getting attendance stats:', error);
+    logger.error('Error getting attendance stats:', error);
     throw error;
   }
 };
@@ -174,7 +174,7 @@ attendanceSchema.statics.getStudentRecords = async function(studentId) {
       notes: record.notes
     }));
   } catch (error) {
-    console.error('Error getting student attendance records:', error);
+    logger.error('Error getting student attendance records:', error);
     throw error;
   }
 };

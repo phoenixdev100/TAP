@@ -12,6 +12,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { motion } from "framer-motion";
 import api from "@/api/axios";
 import { useAuth } from "@/contexts/AuthContext";
+import logger from '@/utils/logger';
 
 interface ProfileData {
     firstName: string;
@@ -86,7 +87,7 @@ const Profile = () => {
                 });
             }
         } catch (error) {
-            console.error('Error fetching profile data:', error);
+            logger.error('Error fetching profile data:', error);
             // Fallback to user data from AuthContext
             if (user) {
                 setFormData({
@@ -139,7 +140,7 @@ const Profile = () => {
                 throw new Error(response.data?.message || 'Failed to update profile');
             }
         } catch (error: any) {
-            console.error('Error updating profile via API:', error);
+            logger.error('Error updating profile via API:', error);
             // Fallback to localStorage if API fails
             setIsEditing(false);
             localStorage.setItem('userProfile', JSON.stringify(formData));
@@ -329,7 +330,7 @@ const Profile = () => {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className={`grid grid-cols-1 ${user?.role === 'student' ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-4`}>
                                     <div className="space-y-2">
                                         <Label htmlFor="year">Academic Year</Label>
                                         <Input
@@ -350,16 +351,18 @@ const Profile = () => {
                                             className="border-2 focus:ring-2 focus:ring-purple-500 dark:bg-slate-700/50 dark:border-slate-600 rounded-2xl"
                                         />
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="gpa">GPA</Label>
-                                        <Input
-                                            id="gpa"
-                                            value={formData.gpa}
-                                            onChange={(e) => handleInputChange("gpa", e.target.value)}
-                                            disabled={!isEditing}
-                                            className="border-2 focus:ring-2 focus:ring-purple-500 dark:bg-slate-700/50 dark:border-slate-600 rounded-2xl"
-                                        />
-                                    </div>
+                                    {user?.role === 'student' && (
+                                        <div className="space-y-2">
+                                            <Label htmlFor="gpa">GPA</Label>
+                                            <Input
+                                                id="gpa"
+                                                value={formData.gpa}
+                                                onChange={(e) => handleInputChange("gpa", e.target.value)}
+                                                disabled={!isEditing}
+                                                className="border-2 focus:ring-2 focus:ring-purple-500 dark:bg-slate-700/50 dark:border-slate-600 rounded-2xl"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
 
                                 <Separator className="dark:bg-slate-700" />

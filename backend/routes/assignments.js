@@ -131,6 +131,7 @@ router.get('/', auth, async (req, res) => {
         description: assignment.description,
         dueDate: assignment.dueDate.toISOString().split('T')[0],
         className: assignment.className,
+        link: assignment.link || '',
         status: assignment.status,
         createdBy: assignment.createdBy,
         assignedTo: assignment.assignedTo,
@@ -155,7 +156,7 @@ router.get('/', auth, async (req, res) => {
 // Create assignment (teacher/admin only)
 router.post('/', auth, async (req, res) => {
   try {
-    const { title, description, dueDate, classId, className, assignedTo } = req.body;
+    const { title, description, dueDate, classId, className, link, assignedTo } = req.body;
     
     // Validate permissions
     if (!['teacher', 'college_admin'].includes(req.user.role)) {
@@ -171,6 +172,7 @@ router.post('/', auth, async (req, res) => {
     const sanitizedDueDate = validateAndSanitize.date(dueDate);
     const sanitizedClassId = validateAndSanitize.objectId(classId);
     const sanitizedClassName = validateAndSanitize.string(className, 100);
+    const sanitizedLink = validateAndSanitize.string(link, 1000);
     const sanitizedAssignedTo = validateAndSanitize.objectIdArray(assignedTo);
     const createdBy = validateAndSanitize.objectId(req.user.userId);
 
@@ -189,6 +191,7 @@ router.post('/', auth, async (req, res) => {
       dueDate: sanitizedDueDate,
       classId: sanitizedClassId,
       className: sanitizedClassName,
+      link: sanitizedLink,
       createdBy: createdBy,
       assignedTo: sanitizedAssignedTo,
       status: 'published'
@@ -310,7 +313,7 @@ router.post('/:id/submit', auth, async (req, res) => {
 router.put('/:id', auth, async (req, res) => {
   try {
     const assignmentId = validateAndSanitize.objectId(req.params.id);
-    const { title, description, dueDate, className, assignedTo } = req.body;
+    const { title, description, dueDate, className, link, assignedTo } = req.body;
     const userId = validateAndSanitize.objectId(req.user.userId);
 
     if (!assignmentId || !userId) {
@@ -333,6 +336,7 @@ router.put('/:id', auth, async (req, res) => {
     const sanitizedDescription = validateAndSanitize.string(description, 2000);
     const sanitizedDueDate = validateAndSanitize.date(dueDate);
     const sanitizedClassName = validateAndSanitize.string(className, 100);
+    const sanitizedLink = validateAndSanitize.string(link, 1000);
     const sanitizedAssignedTo = validateAndSanitize.objectIdArray(assignedTo);
 
     // Find assignment
@@ -357,6 +361,7 @@ router.put('/:id', auth, async (req, res) => {
     if (sanitizedDescription) assignment.description = sanitizedDescription;
     if (sanitizedDueDate) assignment.dueDate = sanitizedDueDate;
     if (sanitizedClassName) assignment.className = sanitizedClassName;
+    if (sanitizedLink !== undefined) assignment.link = sanitizedLink;
     if (sanitizedAssignedTo) assignment.assignedTo = sanitizedAssignedTo;
 
     await assignment.save();

@@ -6,7 +6,7 @@ const logger = {
   },
   error: (...args) => {
     if (process.env.NODE_ENV === 'development') {
-      console.error(...args);
+      logger.error(...args);
     }
   },
   warn: (...args) => {

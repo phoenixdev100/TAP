@@ -109,7 +109,7 @@ const Dashboard = () => {
       setAcademicStats(stats);
       
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      logger.error('Error fetching dashboard data:', error);
       toast({
         title: "Error",
         description: "Failed to load dashboard data",

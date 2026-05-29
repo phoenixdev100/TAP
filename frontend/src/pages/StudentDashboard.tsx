@@ -100,7 +100,7 @@ const StudentDashboard = () => {
       setAcademicStats(stats);
 
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      logger.error('Error fetching dashboard data:', error);
       toast({
         title: "Error",
         description: "Failed to load dashboard data",
@@ -156,7 +156,7 @@ const StudentDashboard = () => {
         assignmentCompletion: assignmentData.submissionRate || 0
       };
     } catch (error) {
-      console.error('Error fetching academic stats:', error);
+      logger.error('Error fetching academic stats:', error);
       // Fallback to zero values if backend endpoints don't exist
       return {
         attendanceRate: 0,

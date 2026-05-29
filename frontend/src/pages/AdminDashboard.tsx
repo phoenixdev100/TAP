@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import api from '@/api/axios';
+import Loader from '@/components/Loader';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -103,7 +104,7 @@ const AdminDashboard = () => {
       setSystemStats(stats);
 
     } catch (error) {
-      console.error('Error fetching system data:', error);
+      logger.error('Error fetching system data:', error);
       toast({
         title: "Error",
         description: "Failed to load system data",
@@ -137,7 +138,7 @@ const AdminDashboard = () => {
         totalClasses: Number(classesData.length) || 0
       };
     } catch (error) {
-      console.error('Error fetching system stats:', error);
+      logger.error('Error fetching system stats:', error);
       // Fallback to zero values if backend endpoints don't exist
       return {
         totalUsers: 0,
@@ -152,6 +153,10 @@ const AdminDashboard = () => {
     logout();
     navigate('/');
   };
+
+  if (loading) {
+    return <Loader text="Loading dashboard..." />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-blue-50 dark:to-slate-900">
